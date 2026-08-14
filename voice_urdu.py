@@ -2,20 +2,31 @@
 voice_urdu.py
 Urdu narration, with word timings for the karaoke caption.
 
-Four engines, tried in a fixed order, and the order is the point:
+Four backends, tried as a ladder of nine tiers, and the order is the point:
 
-  1. Gemini 2.5 Flash TTS, voice Charon — the one that actually sounds Urdu.
-  2. Gemini 2.5 Flash Lite TTS (preview) — same family, separate quota. This
-     tier exists specifically so a spent daily allowance on tier 1 costs the
-     accent, not the video.
-  3. OpenAI TTS. Worth knowing what this is: OpenAI ships no Urdu-specific
-     voice. It will read Urdu text with an English-trained voice and the
-     accent is audibly wrong — this is the same finding that moved the Time
-     Lens project off OpenAI and onto Gemini. It sits here as a third
-     parachute, not as a peer of the tiers above it.
-  4. Edge TTS, free, `ur-PK-AsadNeural`. Never runs out, and it is the only
-     engine of the four that reports REAL word boundaries — every other tier's
-     karaoke timing is estimated from word length.
+  1-4. THE GEMINI API (generativelanguage.googleapis.com, :generateContent).
+     The one that actually sounds Urdu, and the only backend here that accepts
+     a style prompt — delivery is described in words rather than dialled in as
+     a number. Four model ids because a wrong or retired id does not degrade,
+     it 404s, and preview names change without warning.
+
+  5-8. GOOGLE CLOUD TEXT-TO-SPEECH (texttospeech.googleapis.com). A DIFFERENT
+     PRODUCT sharing the same key, not another model: different host, payload,
+     response field, and no style prompt at all. Which of the two a given key
+     can call depends on what is enabled on the project, which the code cannot
+     know in advance — so if the Gemini tiers all 404, these carry the video.
+     Voice ids are full ("ur-PK-Chirp3-HD-Algenib"); a bare "Algenib" is
+     rejected. Chirp3-HD first, Wavenet and Standard behind it as the floor
+     that has existed for ur-PK for years.
+
+  9. OpenAI TTS. Worth knowing what this is: OpenAI ships no Urdu-specific
+     voice. It reads Urdu with an English-trained voice and the accent is
+     audibly wrong — the same finding that moved the Time Lens project onto
+     Gemini. A parachute, not a peer of the tiers above it.
+
+  last. Edge TTS, free. Never runs out, and it is the only engine of the four
+     that reports REAL word boundaries — every other tier's karaoke timing is
+     estimated from word length.
 
 Each tier gets two attempts and then hands over. A tier that returns a verdict
 of "this will not come good" — a spent daily quota, a bad key, a wrong model
@@ -34,12 +45,14 @@ import requests
 
 from config import (
     GEMINI_API_KEY, GEMINI_TTS_MODELS, GEMINI_TTS_VOICE,
+    CLOUD_TTS_VOICES, CLOUD_TTS_RATE, CLOUD_TTS_PITCH,
     OPENAI_API_KEY, OPENAI_TTS_MODEL, OPENAI_TTS_VOICE,
     EDGE_TTS_UR_VOICE, EDGE_TTS_RATE, GEMINI_MIN_INTERVAL, GEMINI_MAX_BACKOFF,
     TTS_ATTEMPTS, TEMP_DIR,
 )
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+CLOUD_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
 OPENAI_URL = "https://api.openai.com/v1/audio/speech"
 
 STYLE = os.environ.get("GEMINI_TTS_STYLE", "").strip() or (
@@ -169,6 +182,84 @@ def _gemini(text: str, out_path: str, model: str, label: str) -> None:
     raise RuntimeError(f"{label} failed: {last}")
 
 
+def _cloud_tts(text: str, out_path: str, voice: str, label: str) -> None:
+    """Google Cloud Text-to-Speech. A different product from the Gemini API.
+
+    Three things differ from `_gemini` above, and getting any one of them wrong
+    fails every call:
+
+    - The response is `audioContent`, a base64 string, NOT the Gemini API's
+      `candidates[0].content.parts[0].inlineData`.
+    - There is no style prompt. Cloud TTS reads exactly what it is given, so
+      putting STYLE in the input would make the narrator read the instructions
+      aloud — "yeh text pur-sukoon andaz mein parho" spoken over the video.
+      Delivery is set numerically instead, with speakingRate and pitch.
+    - `voice.name` wants the full id, e.g. "ur-PK-Chirp3-HD-Algenib". A bare
+      "Algenib" is rejected.
+
+    MP3 is requested directly rather than LINEAR16: LINEAR16 comes back as a
+    WAV with a 44-byte header, and feeding that to the raw-PCM path would play
+    the header as a click before every line.
+    """
+    if label in _off:
+        raise RuntimeError(_off[label])
+
+    body = {
+        "input": {"text": text},
+        "voice": {"languageCode": "-".join(voice.split("-")[:2]), "name": voice},
+        "audioConfig": {
+            "audioEncoding": "MP3",
+            "sampleRateHertz": 24000,
+            "speakingRate": CLOUD_TTS_RATE,
+            "pitch": CLOUD_TTS_PITCH,
+        },
+    }
+
+    last = None
+    for attempt in range(1, TTS_ATTEMPTS + 1):
+        try:
+            r = requests.post(CLOUD_TTS_URL,
+                              headers={"x-goog-api-key": GEMINI_API_KEY,
+                                       "Content-Type": "application/json"},
+                              json=body, timeout=180)
+        except Exception as e:
+            last = e
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(5)
+            continue
+
+        if r.status_code in (400, 401, 403, 404):
+            # Covers both "this voice does not exist" and "the Cloud TTS API is
+            # not enabled on this project" — neither improves on a retry, and
+            # the next voice in the list is the thing worth trying.
+            _off[label] = f"{label}: HTTP {r.status_code} — {r.text[:160]}"
+            last = RuntimeError(_off[label])
+            break
+        if r.status_code == 429:
+            last = RuntimeError(f"HTTP 429: {r.text[:200]}")
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(30)
+            continue
+        if r.status_code >= 400:
+            last = RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(5)
+            continue
+
+        try:
+            audio = r.json()["audioContent"]
+        except (ValueError, KeyError) as e:
+            last = e
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(5)
+            continue
+        with open(out_path, "wb") as f:
+            f.write(base64.b64decode(audio))
+        return
+
+    raise RuntimeError(f"{label} failed: {last}")
+
+
 def _openai(text: str, out_path: str) -> None:
     label = "OpenAI"
     if label in _off:
@@ -274,6 +365,12 @@ def _tiers():
             # default arg, not closure capture: a bare `model` here would make
             # every tier call the last id in the list.
             out.append((label, lambda t, o, m=model, l=label: _gemini(t, o, m, l)))
+        # Same key, different product. If the key turns out to be a Cloud key
+        # rather than a Generative Language one, every tier above fails fast
+        # with a 404 and these carry the video instead.
+        for voice in CLOUD_TTS_VOICES:
+            label = f"CloudTTS {voice}"
+            out.append((label, lambda t, o, v=voice, l=label: _cloud_tts(t, o, v, l)))
     if OPENAI_API_KEY:
         out.append(("OpenAI", _openai))
     return out

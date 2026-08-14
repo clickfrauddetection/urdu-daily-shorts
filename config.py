@@ -107,6 +107,30 @@ GEMINI_TTS_MODELS = [
                         "gemini-2.5-flash-lite-preview-tts").split(",")
     if m.strip()
 ]
+
+# Google Cloud Text-to-Speech is a DIFFERENT PRODUCT from the Gemini API, not
+# another model on it: different host, different payload, different response
+# field, and no style prompt at all. Which one a GEMINI_API_KEY can actually
+# call depends on what is enabled on the project, and that is not something the
+# code can know in advance — so both are tried, Gemini first, and whichever
+# answers is the one that narrates.
+#
+# Voice ids here are FULL ids on purpose. Cloud TTS rejects a bare "Algenib":
+# the name field wants "ur-PK-Chirp3-HD-Algenib". Chirp3-HD is the good one and
+# may not be enabled everywhere, so Wavenet and Standard sit behind it — those
+# have existed for ur-PK for years and are the floor that always answers.
+CLOUD_TTS_VOICES = [
+    v.strip() for v in (os.environ.get("CLOUD_TTS_VOICES") or
+                        "ur-PK-Chirp3-HD-Algenib,"
+                        "ur-PK-Chirp3-HD-Charon,"
+                        "ur-PK-Wavenet-A,"
+                        "ur-PK-Standard-A").split(",")
+    if v.strip()
+]
+# Cloud TTS takes no prompt, so delivery is set numerically or not at all.
+# Slightly under 1.0 is the whole "sakoon" register in one number.
+CLOUD_TTS_RATE = float(os.environ.get("CLOUD_TTS_RATE") or 0.94)
+CLOUD_TTS_PITCH = float(os.environ.get("CLOUD_TTS_PITCH") or 0.0)
 # Female, bright, young. Charon is a male voice and it read the first live
 # video like a documentary narrator — wrong register for a feed where the whole
 # job of the first two seconds is to sound like a person talking to you.
