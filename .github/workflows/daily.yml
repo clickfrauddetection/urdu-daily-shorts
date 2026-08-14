@@ -24,9 +24,12 @@ permissions:
 jobs:
   build-and-post:
     runs-on: ubuntu-latest
-    # A 60s video is ~8 scene renders plus TTS; 25 minutes is generous. Left
-    # unset, a hung Playwright call burns six hours of the account's minutes.
-    timeout-minutes: 25
+    # Measured, not guessed. Run #1 was cancelled at 25 minutes with the render
+    # still going — a 7-second scene took 220s at RENDER_SCALE=2, so eight of
+    # them could never fit. At the measured scale a build is well under 15
+    # minutes; this leaves room for a slow runner without letting a genuinely
+    # hung Playwright call burn hours of the account's minutes.
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +67,14 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           NICHE: ${{ vars.NICHE || 'daily' }}
+          RENDER_SCALE: ${{ vars.RENDER_SCALE }}
+          # Without this, CI sees a pipe rather than a terminal, Python buffers
+          # stdout, and the whole log arrives at once when the process exits —
+          # so a 24-minute build that was working fine looked identical to a
+          # hang for its entire duration. This is why run #1 showed nothing.
+          PYTHONUNBUFFERED: "1"
         run: |
-          python main.py \
+          python -u main.py \
             ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \
             ${{ github.event.inputs.dry_run == 'true' && ' ' || '--post' }}
 

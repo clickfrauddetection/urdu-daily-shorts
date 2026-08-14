@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 
 import assembler
@@ -28,6 +29,20 @@ from config import (
 )
 from renderer import render_layer, probe_fonts
 from templates.scene import render_scene, FITS
+
+_T0 = time.monotonic()
+
+
+def step(msg: str) -> None:
+    """A log line with the elapsed time on it.
+
+    Sixteen minutes of silence is indistinguishable from a hang, and that is
+    how the first CI run read — the build was working the whole time, there
+    was simply nothing to say so. Every phase announces itself with a running
+    clock now, and flush=True because CI captures a pipe, not a terminal, so
+    Python buffers stdout and holds it all until the process exits.
+    """
+    print(f"[{time.monotonic() - _T0:6.1f}s] {msg}", flush=True)
 
 # Between scenes. Much smaller than the opening pad: the background footage is
 # continuous across the cut, so a long gap here reads as the video stalling
@@ -88,19 +103,20 @@ def plan(voices: list[dict]) -> tuple[list[float], list[float], list[float], flo
 def build(spec: dict, name: str, pillar: str) -> tuple[str, float]:
     scenes = spec["scenes"]
 
-    print("Narrating")
+    step(f"Narrating {len(scenes)} lines")
     voices = [voice_urdu.narrate(s["spoken"], f"{name}_s{i}")
               for i, s in enumerate(scenes)]
 
     leads, durations, starts, total = plan(voices)
-    print(f"Building {name}: {len(scenes)} scenes, {total:.1f}s")
+    step(f"Planned {total:.1f}s over {len(scenes)} scenes")
 
     # Real footage first; generate one only when there is none. Stock is free,
     # and a real clip of a real room still beats a generated one at holding a
     # viewer — the generated path is the parachute, not the plan.
+    step("Fetching the background")
     bg = stock_bg.fetch(pillar) or replicate_bg.fetch(pillar)
 
-    print("Rendering layers")
+    step("Rendering scene layers")
     composed, bg_offset = [], 0.0
     for i, (scene, dur, lead, voice) in enumerate(
             zip(scenes, durations, leads, voices)):
@@ -111,10 +127,13 @@ def build(spec: dict, name: str, pillar: str) -> tuple[str, float]:
             layer, bg, bg_offset, dur, f"{name}_s{i}"))
         bg_offset += dur
 
+    step("Joining the scenes")
     path = assembler.concat(composed, name)
+    step("Laying in the narration")
     path = assembler.mux_voice(path, voices, starts, total)
+    step("Adding the music bed")
     path = assembler.add_music(path, total)
-    print(f"Video written: {path}  ({total:.1f}s)")
+    step(f"Video written: {path}  ({total:.1f}s)")
     return path, total
 
 
@@ -162,7 +181,7 @@ def main() -> int:
         topic, pillar = args.topic, (args.pillar or NICHE)
     else:
         topic, pillar = content.next_topic()
-    print(f"Topic: {topic}   [{pillar}]")
+    step(f"Topic: {topic}   [{pillar}]")
     spec = content.write_script(topic, pillar)
     guard.check(spec)
 

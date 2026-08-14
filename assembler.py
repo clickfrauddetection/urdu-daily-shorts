@@ -9,6 +9,7 @@ offsets computed against that plan land where they were meant to. Nothing here
 measures a file to find out how long it turned out to be.
 """
 import os
+import random
 import subprocess
 
 from config import (
@@ -27,7 +28,13 @@ FALLBACK_BG = "0x0A1628"
 # merge with no attribution and no licence checked, and they have been sitting
 # in its music folder ever since.
 MUSIC_ATTRIBUTION: dict[str, str] = {
-    # "some_track.mp3": 'Music: "Some Track" by Artist — CC BY 4.0',
+    # Beds carried over from the Time Lens project. Confirm before the first
+    # public post that these are the generated beds we own outright and not a
+    # licensed third-party track — the credit line below is what goes out with
+    # every video, and it is a claim, not a placeholder.
+    "timelens_bed_choir.mp3": "Music: original score",
+    "timelens_bed_choir_dark.mp3": "Music: original score",
+    "timelens_bed_swell.mp3": "Music: original score",
 }
 
 
@@ -143,9 +150,15 @@ def mux_voice(video_path: str, clips: list[dict], starts: list[float],
 
 
 def pick_music() -> tuple[str | None, str]:
-    """The first licensed track in data/music, and its credit line."""
+    """A licensed track from data/music, and its credit line.
+
+    Chosen at random rather than taking the first one alphabetically: this
+    posts daily, and the same thirty seconds of choir under every video for a
+    month is the fastest way to make a channel sound like a template.
+    """
     if not os.path.isdir(MUSIC_DIR):
         return None, ""
+    usable = []
     for fn in sorted(os.listdir(MUSIC_DIR)):
         if not fn.lower().endswith((".mp3", ".m4a", ".wav")):
             continue
@@ -153,8 +166,12 @@ def pick_music() -> tuple[str | None, str]:
             print(f"  skipping {fn}: no entry in assembler.MUSIC_ATTRIBUTION. "
                   f"Add the licence line before this track can be used.")
             continue
-        return os.path.join(MUSIC_DIR, fn), MUSIC_ATTRIBUTION[fn]
-    return None, ""
+        usable.append(fn)
+    if not usable:
+        return None, ""
+    fn = random.choice(usable)
+    print(f"  music bed: {fn}")
+    return os.path.join(MUSIC_DIR, fn), MUSIC_ATTRIBUTION[fn]
 
 
 def add_music(video_path: str, duration: float) -> str:

@@ -12,7 +12,7 @@ patch on that one fact. On a slow CI runner the patches stop holding.
 
 Here the browser's clock is never used. Animations are authored paused, and
 each frame is produced by seeking every animation to an exact time and taking
-a screenshot. A 7.00s scene is 210 frames at 30fps on any machine, so the
+a screenshot. A 7.00s scene is the same frame count on any machine, so the
 narration offsets computed in main.py are true by construction and no padding
 is ever needed.
 
@@ -24,6 +24,7 @@ seeked frame-accurately, which would put the drift straight back in.
 """
 import os
 import subprocess
+import time
 
 from playwright.sync_api import sync_playwright
 
@@ -96,12 +97,14 @@ def render_layer(html: str, name: str, duration: float,
 
     out = os.path.join(TEMP_DIR, f"{name}.mov")
     frames = max(1, round(duration * FPS))
+    t_start = time.monotonic()
 
     ff = subprocess.Popen(
         ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
          "-f", "image2pipe", "-framerate", str(FPS), "-c:v", "png", "-i", "-",
-         # Downscale from the 2x render. lanczos is the only filter here worth
-         # arguing about: bilinear softens Nastaliq's hairlines into mush.
+         # A no-op at SCALE=1; the downscale path when SCALE is raised. lanczos
+         # is the only filter here worth arguing about — bilinear softens
+         # Nastaliq's hairlines into mush.
          "-vf", f"scale={WIDTH}:{HEIGHT}:flags=lanczos",
          "-c:v", "qtrle", "-pix_fmt", "argb", out],
         stdin=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -131,7 +134,16 @@ def render_layer(html: str, name: str, duration: float,
                     print(f"  {name}: {sel} still {got['lines']} lines at the "
                           f"{min_px}px floor — the text is too long, not too big")
 
+            # A scene is a few hundred screenshots and takes tens of seconds.
+            # Without a heartbeat the CI log shows nothing at all between
+            # scenes, which is indistinguishable from a hang — and that is
+            # exactly how the first run read.
+            mark = max(frames // 4, 1)
+            t0 = time.monotonic()
             for i in range(frames):
+                if i and i % mark == 0:
+                    print(f"    {name}: {100 * i // frames}% "
+                          f"({time.monotonic() - t0:.0f}s)", flush=True)
                 page.evaluate(_SEEK, (i / FPS) * 1000)
                 # NOT animations="disabled". That option does not freeze an
                 # animation where it is — it fast-forwards every animation to
@@ -152,7 +164,8 @@ def render_layer(html: str, name: str, duration: float,
         if ff.wait() != 0:
             raise RuntimeError(f"ffmpeg failed encoding {name}: {err[-600:]}")
 
-    print(f"  {name}: {frames} frames / {duration:.2f}s")
+    print(f"  {name}: {frames} frames / {duration:.2f}s "
+          f"in {time.monotonic() - t_start:.0f}s", flush=True)
     return out
 
 

@@ -45,12 +45,18 @@ NICHE = os.environ.get("NICHE") or "daily"
 
 # ------------------------------------------------------------------- geometry
 WIDTH, HEIGHT = 1080, 1920
-FPS = 30
+# 25, not 30. Every platform accepts 23-60, and the renderer's cost is per
+# frame — this is 17% of the whole build for something no viewer can see.
+FPS = int(os.environ.get("FPS") or 25)
 
-# Render at 2x and let ffmpeg downscale. Urdu — Nastaliq especially — is thin,
-# high-contrast type; at 1x the strokes alias and H.264 turns the shimmer into
-# blocking. This is the single biggest visible-quality knob in the repo.
-SCALE = int(os.environ.get("RENDER_SCALE") or 2)
+# 1, after measuring. The theory for 2x was sound — Nastaliq is thin,
+# high-contrast type and downscaling from 2x with lanczos gives cleaner edges —
+# but the frames were compared side by side at 1080 and the difference is not
+# visible, while the cost is: a 7-second scene took 220s at 2x and 46s at 1x,
+# which is 29 minutes of rendering for one video versus 6. That was the whole
+# reason the first CI run sat there for 16 minutes with nothing to show.
+# RENDER_SCALE=2 is still there for a one-off video worth the wait.
+SCALE = int(os.environ.get("RENDER_SCALE") or 1)
 
 # Platform UI safe zones, in 1080x1920 space. Facebook Reels and YouTube
 # Shorts both draw over the video: the caption/profile bar along the bottom,
