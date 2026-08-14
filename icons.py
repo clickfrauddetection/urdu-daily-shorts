@@ -36,8 +36,12 @@ _P = {
     "brain": "M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 1 5 3 3 0 0 0 4 3V3z"
              "M15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-1 5 3 3 0 0 1-4 3V3z",
     "focus": "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3",
+    # The body alone drew as a plain rounded rectangle, and at 148px in frame
+    # one of the first live video that is what a viewer saw: an empty box. A
+    # phone needs its earpiece and its home line to read as a phone at a
+    # glance.
     "phone_off": "M17 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"
-                 "M3 3l18 18",
+                 "M9.5 6h5M10 18.2h4M3 3l18 18",
     # money / work (second niche, kept ready)
     "wallet": "M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5"
               "a2 2 0 0 1-2-2V5M17 13h.01",

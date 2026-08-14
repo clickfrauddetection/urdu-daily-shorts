@@ -51,10 +51,13 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Overrides only. Left unset, config.py's defaults apply — these
-          # exist so a preview model id can be changed without a commit.
-          GEMINI_TTS_MODEL: ${{ secrets.GEMINI_TTS_MODEL }}
-          GEMINI_TTS_LITE_MODEL: ${{ vars.GEMINI_TTS_LITE_MODEL }}
+          # A VARIABLE, never a secret. Which model to call is a code decision,
+          # and a secret is the one value nobody can read back — run #3 failed
+          # its first tier with `HTTP 400 for model '***'`, masked, because the
+          # model name was sitting in a secret. Left unset, config.py's list
+          # applies. Comma-separated, tried in order.
+          GEMINI_TTS_MODELS: ${{ vars.GEMINI_TTS_MODELS }}
+          GEMINI_TTS_VOICE: ${{ vars.GEMINI_TTS_VOICE }}
           # Tier 3 of the voice ladder; the run works without it.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}

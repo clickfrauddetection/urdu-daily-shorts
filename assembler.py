@@ -22,6 +22,9 @@ from config import (
 # not black: a missing background has to look like a choice, not like a bug.
 FALLBACK_BG = "0x0A1628"
 
+# How far out of focus the footage sits. 0 turns the grade off entirely.
+BG_BLUR = float(os.environ.get("BG_BLUR") or 9)
+
 # A track plays on a public Page under the channel's name, so every file here
 # needs a licence someone actually read. A track with no entry is SKIPPED, not
 # played with a shrug — the sibling repo carries four files that arrived in a
@@ -67,9 +70,19 @@ def compose_scene(layer_mov: str, bg_path: str | None, bg_offset: float,
              f"x=(iw-ow)/2+sin(t/9)*{(over_w - WIDTH) // 2}:"
              f"y=(ih-oh)/2+cos(t/13)*{(over_h - HEIGHT) // 3}")
 
+    # Blurred and pulled down before the text goes on. The first live video ran
+    # over a rain-on-glass clip: thousands of little high-contrast highlights,
+    # directly behind the headline, and the type had to fight every one of
+    # them. The background's job here is mood, not detail — nobody watches a
+    # text video for the footage — and out of focus it also stops competing
+    # with the words. This is the difference between a video that reads at a
+    # glance and one a viewer scrolls past because it looked like work.
+    grade = (f"gblur=sigma={BG_BLUR},"
+             f"eq=brightness=-0.10:saturation=0.72:contrast=0.94")
+
     if bg_path:
         src = ["-stream_loop", "-1", "-ss", f"{bg_offset:.3f}", "-i", bg_path]
-        bg_chain = f"[0:v]{drift},fps={FPS},format=rgba[bg]"
+        bg_chain = f"[0:v]{drift},{grade},fps={FPS},format=rgba[bg]"
     else:
         # Not an error path worth failing on, but it must look deliberate
         # rather than broken: the brand's own dark blue, not black.

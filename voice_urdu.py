@@ -33,7 +33,7 @@ import edge_tts
 import requests
 
 from config import (
-    GEMINI_API_KEY, GEMINI_TTS_MODEL, GEMINI_TTS_LITE_MODEL, GEMINI_TTS_VOICE,
+    GEMINI_API_KEY, GEMINI_TTS_MODELS, GEMINI_TTS_VOICE,
     OPENAI_API_KEY, OPENAI_TTS_MODEL, OPENAI_TTS_VOICE,
     EDGE_TTS_UR_VOICE, EDGE_TTS_RATE, GEMINI_MIN_INTERVAL, GEMINI_MAX_BACKOFF,
     TTS_ATTEMPTS, TEMP_DIR,
@@ -43,9 +43,10 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 OPENAI_URL = "https://api.openai.com/v1/audio/speech"
 
 STYLE = os.environ.get("GEMINI_TTS_STYLE", "").strip() or (
-    "Yeh Urdu mein parho, saaf Urdu talaffuz ke saath. Lehja pur-sukoon aur "
-    "dostana ho — jaise kisi apne ko mashwara de rahe ho. Na koi jaldi, na "
-    "koi eshtehari andaaz, natural pauses ke saath."
+    "Yeh Urdu mein parho, saaf Urdu talaffuz ke saath. Ek nau-jawan larki ki "
+    "aawaz — zinda, garam-josh aur dostana, jaise apni saheli ko koi dilchasp "
+    "baat bata rahi ho. Halka sa josh, natural pauses, sawal par lehja upar. "
+    "Na khabarnama, na eshtehar."
 )
 
 # Keyed by engine label. Set once when that engine says the rest of the run is
@@ -185,7 +186,10 @@ def _openai(text: str, out_path: str) -> None:
                       # The instructions field is the only Urdu steer available
                       # here — there is no Urdu voice to select.
                       "instructions": "Read this Urdu text with clear Urdu "
-                                      "pronunciation, calm and unhurried."},
+                                      "pronunciation. Bright, warm and lively, "
+                                      "like a young woman telling a friend "
+                                      "something interesting — not a "
+                                      "newsreader."},
                 timeout=180)
         except Exception as e:
             last = e
@@ -256,15 +260,20 @@ def duration_of(path: str) -> float:
 
 
 def _tiers():
-    """The engine order, skipping anything that has no credentials."""
+    """The engine order, skipping anything that has no credentials.
+
+    One tier per Gemini model id, each with its own retired-for-the-run state,
+    so a 404 on the first name moves to the next name rather than giving up on
+    Gemini entirely — and a spent daily quota on one moves to the next, which
+    is the whole reason the lite sibling is in the list.
+    """
     out = []
     if GEMINI_API_KEY:
-        out.append(("Gemini Flash TTS",
-                    lambda t, o: _gemini(t, o, GEMINI_TTS_MODEL, "Gemini Flash TTS")))
-        if GEMINI_TTS_LITE_MODEL and GEMINI_TTS_LITE_MODEL != GEMINI_TTS_MODEL:
-            out.append(("Gemini Flash Lite TTS",
-                        lambda t, o: _gemini(t, o, GEMINI_TTS_LITE_MODEL,
-                                             "Gemini Flash Lite TTS")))
+        for model in GEMINI_TTS_MODELS:
+            label = f"Gemini {model}"
+            # default arg, not closure capture: a bare `model` here would make
+            # every tier call the last id in the list.
+            out.append((label, lambda t, o, m=model, l=label: _gemini(t, o, m, l)))
     if OPENAI_API_KEY:
         out.append(("OpenAI", _openai))
     return out

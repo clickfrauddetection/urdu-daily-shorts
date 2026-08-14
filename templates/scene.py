@@ -7,11 +7,13 @@ own scrim — a top-and-bottom gradient that guarantees the type is readable on
 whatever clip Pixabay returned that morning. Without it, a video's legibility
 is decided by a stock clip nobody looked at.
 
-Two typefaces on purpose. Noto Nastaliq Urdu is the shape a reader actually
-stops for, and it is used for the headline only: it needs enormous line-height
-(descenders sit far below the baseline — at anything under ~2.1 they clip) and
-it is genuinely hard to read at caption size. The spoken caption underneath is
-Noto Sans Arabic, which stays legible small and moving.
+Nastaliq for both the headline and the caption. The caption started on Noto
+Sans Arabic, which is the easier face to read small and moving — but in a
+finished video the sans line read as a machine subtitle bolted under Urdu type,
+and the frame stopped looking like an Urdu video at all. It is carried smaller
+and with much more leading to pay for that: Nastaliq's descenders sit far below
+the baseline, and at anything under about 2.0 the lines clip into each other.
+Noto Sans Arabic stays loaded as the fallback for characters Nastaliq lacks.
 
 Animations are authored `paused` with `fill: both` because renderer.py seeks
 them frame by frame; see the note there before changing any timing here.
@@ -28,7 +30,7 @@ from icons import icon, ROLE_DEFAULT
 # Ported from the reels repo. Captions cap at two lines and the headline at
 # three: a third stacked line of Nastaliq stops reading as type and starts
 # covering the picture. renderer.render_layer measures and shrinks to fit.
-FITS = [(".h", 3, 54), (".cap-box", 2, 34)]
+FITS = [(".h", 3, 54), (".cap-box", 2, 32)]
 
 MIN_WORD_DURATION = 0.12  # so a very short or mistimed word still flashes
 
@@ -54,9 +56,13 @@ def script_of(text: str, face: str = "display") -> tuple[str, str]:
     urdu = any("؀" <= ch <= "ۿ" or "ﭐ" <= ch <= "﷿"
                or "ﹰ" <= ch <= "﻿" for ch in text)
     if urdu:
-        if face == "display":
-            return "rtl", "'NastaliqUrdu', 'SansArabic', serif"
-        return "rtl", "'SansArabic', 'NastaliqUrdu', sans-serif"
+        # Nastaliq for BOTH now. The caption started on Noto Sans Arabic for
+        # legibility, and it is genuinely the easier face to read small — but
+        # side by side in a finished video the sans caption reads as a machine
+        # subtitle bolted under Urdu type, and the whole frame stops looking
+        # like an Urdu video. It is carried at a larger size and a much taller
+        # line-height below to pay for the difference.
+        return "rtl", "'NastaliqUrdu', 'SansArabic', serif"
     return "ltr", "Arial, Helvetica, sans-serif"
 
 
@@ -133,25 +139,38 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
 
 /* progress pips — how far through the video the viewer is, which measurably
    holds people who would otherwise bail at the halfway mark */
-.pips {{ display:flex; gap:10px; justify-content:flex-start; margin-bottom:44px; }}
-.pip {{ width:{int(760 / max(total, 1))}px; height:7px; border-radius:4px;
-  background:rgba(255,255,255,.22); }}
-.pip.on {{ background:{tone}; }}
+.pips {{ display:flex; gap:9px; justify-content:flex-start; margin-bottom:30px; }}
+.pip {{ width:{int(770 / max(total, 1))}px; height:11px; border-radius:6px;
+  background:rgba(255,255,255,.28); }}
+.pip.on {{ background:{tone}; box-shadow:0 0 14px {tone}55; }}
 
+/* Anchored to the top of the safe box, not centred in it. Centred, the
+   headline floated in the middle of the frame with a third of the picture
+   empty above the caption — which is what the first live video looked like. */
 .top {{ flex:1; display:flex; flex-direction:column;
-  align-items:flex-start; justify-content:center; }}
+  align-items:flex-start; justify-content:flex-start; padding-top:120px; }}
 
-.ic {{ color:{tone}; opacity:0; filter:drop-shadow(0 6px 20px rgba(0,0,0,.55));
+/* The icon sits in a tinted disc rather than floating as a thin outline. A
+   2px stroke alone over moving footage reads as a stray mark; the disc gives
+   it a ground, ties it to the scene's colour, and survives a bright frame. */
+.ic-wrap {{ display:flex; align-items:center; justify-content:center;
+  width:200px; height:200px; border-radius:50%;
+  background:{tone}1F; border:3px solid {tone}59;
+  opacity:0; filter:drop-shadow(0 8px 26px rgba(0,0,0,.55));
   animation:pop .55s cubic-bezier(.2,.9,.3,1.3) both paused; }}
-.ic path {{ stroke-dasharray:140; stroke-dashoffset:140;
-  animation:draw 1.1s ease-out both paused; animation-delay:.18s; }}
+.ic {{ color:{tone}; }}
+/* No stroke-draw. It used a fixed dasharray of 140, which is longer than some
+   of these paths and shorter than others, so the icon spent its first second
+   as a partial outline — in the first live video the hook's phone icon opened
+   as an empty rectangle, which is the single worst thing to put in frame one.
+   The pop is enough movement on its own. */
 
 .h {{ font-family:{h_font}; font-weight:700; direction:{h_dir};
   font-size:{scene.get("headline_size", 92)}px;
   /* Nastaliq descenders run deep; below ~2.1 the tails of one line are cut by
      the next. This is the number that most often needs raising, never lowering. */
   line-height:2.15;
-  margin-top:34px; text-align:{"right" if h_dir == "rtl" else "left"};
+  margin-top:20px; text-align:{"right" if h_dir == "rtl" else "left"};
   text-shadow:0 4px 26px rgba(0,0,0,.75);
   opacity:0; animation:rise .7s cubic-bezier(.2,.8,.3,1) both paused;
   animation-delay:.28s; }}
@@ -162,10 +181,12 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
 /* A tinted pill behind the words, ported from the reels repo. The scrim alone
    holds contrast on most clips; the pill holds it on all of them, including the
    bright ones nobody looked at before the video published. */
-.cap-box {{ display:inline-block; padding:14px 26px; border-radius:18px;
-  background:rgba(8,14,24,.66);
-  font-family:{c_font}; font-weight:600; direction:{c_dir};
-  font-size:52px; line-height:1.85;
+.cap-box {{ display:inline-block; padding:20px 30px 26px; border-radius:20px;
+  background:rgba(8,14,24,.72);
+  font-family:{c_font}; font-weight:700; direction:{c_dir};
+  /* Nastaliq, so: smaller than the sans caption was, and far more leading.
+     Its descenders run deep and two lines at 1.85 clipped into each other. */
+  font-size:46px; line-height:2.05;
   text-shadow:0 3px 18px rgba(0,0,0,.85); }}
 /* `forwards`, not `both`, and this is the whole trick of the karaoke line: with
    `both` the word would hold the from-state before its delay, which is the same
@@ -187,7 +208,6 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
   100% {{ color:{p["ink"]}; text-shadow:0 3px 18px rgba(0,0,0,.85); }} }}
 @keyframes pop  {{ from {{ opacity:0; transform:scale(.6) translateY(20px); }}
                    to   {{ opacity:1; transform:none; }} }}
-@keyframes draw {{ to {{ stroke-dashoffset:0; }} }}
 @keyframes rise {{ from {{ opacity:0; transform:translateY(38px); }}
                    to   {{ opacity:1; transform:none; }} }}
 </style>
@@ -198,7 +218,7 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
              for i in range(total))}
   </div>
   <div class="top">
-    {icon(name, 104)}
+    <div class="ic-wrap">{icon(name, 110)}</div>
     <div class="h">{scene["headline"]}</div>
   </div>
   <div class="cap"><div class="cap-box">{

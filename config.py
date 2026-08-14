@@ -90,26 +90,38 @@ AUDIO_SAMPLE_RATE = 48000
 # another. Every rung is overridable, because a preview model id changes
 # without notice and a retired id 404s rather than degrading — which has taken
 # the sibling repos down for days at a time.
-# These two ids are the ones tiktok-reels-agent actually narrates with — taken
-# from a repo that demonstrably works rather than guessed. The first default
-# here was "gemini-2.5-flash-preview-tts", which 404s: a wrong or retired id
-# does not degrade, it fails outright, so Gemini switched off on the first call
-# of run #2 and the whole video was narrated by the free Edge fallback.
-GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL") or "gemini-3.1-flash-tts-preview"
-GEMINI_TTS_LITE_MODEL = (os.environ.get("GEMINI_TTS_LITE_MODEL")
-                         or "gemini-3.1-flash-lite-tts-preview")
-GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Charon"
+# The model list lives in CODE, not in a secret. A secret holds the API key;
+# which model to call is a code decision, and putting it in a secret means the
+# one value nobody can read back is also the one most likely to be wrong.
+#
+# A list rather than one id, tried in order, because a wrong or retired id does
+# not degrade — it 404s outright, which is what silently switched Gemini off
+# for the whole of run #2. Preview model names change without warning, and
+# nobody should have to ship a commit to find that out. Flash first, then its
+# lite sibling (separate quota), then the previous generation as a floor.
+GEMINI_TTS_MODELS = [
+    m.strip() for m in (os.environ.get("GEMINI_TTS_MODELS") or
+                        "gemini-3.1-flash-tts-preview,"
+                        "gemini-3.1-flash-lite-tts-preview,"
+                        "gemini-2.5-flash-preview-tts,"
+                        "gemini-2.5-flash-lite-preview-tts").split(",")
+    if m.strip()
+]
+# Female, bright, young. Charon is a male voice and it read the first live
+# video like a documentary narrator — wrong register for a feed where the whole
+# job of the first two seconds is to sound like a person talking to you.
+GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Leda"
 
 # Tier 3. OpenAI ships no Urdu voice — this reads Urdu with an English-trained
 # voice and the accent is audibly wrong. It is a parachute, not a peer of the
 # Gemini tiers.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
-OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE") or "onyx"
+OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE") or "nova"
 
 # Attempts per tier before handing to the next one.
 TTS_ATTEMPTS = int(os.environ.get("TTS_ATTEMPTS") or 2)
-EDGE_TTS_UR_VOICE = os.environ.get("EDGE_TTS_UR_VOICE") or "ur-PK-AsadNeural"
+EDGE_TTS_UR_VOICE = os.environ.get("EDGE_TTS_UR_VOICE") or "ur-PK-UzmaNeural"
 EDGE_TTS_RATE = os.environ.get("EDGE_TTS_RATE") or "+8%"
 GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_TTS_MIN_INTERVAL") or 6)
 GEMINI_MAX_BACKOFF = float(os.environ.get("GEMINI_TTS_MAX_BACKOFF") or 75)

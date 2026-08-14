@@ -227,32 +227,50 @@ def main() -> int:
 
     # Imported here so a dry run needs no credentials at all — otherwise the
     # thing being previewed cannot be previewed on a fresh clone.
-    results, failures = {}, []
+    results, failures, skipped = {}, [], []
     caption = spec.get("caption", "") + "\n\n" + guard.DISCLAIMER_UR
 
-    try:
-        from poster_fb_reels import post_to_fb_reels
-        results["facebook"] = post_to_fb_reels(path, caption)
-        print("  Facebook Reel published")
-    except Exception as e:
-        failures.append(f"facebook: {e}")
-        print(f"  Facebook failed: {e}")
+    # A platform with no credentials is SKIPPED, not failed. Those two states
+    # look the same in a stack trace and are completely different problems: one
+    # is "you have not set this up yet", the other is "the thing you set up is
+    # broken". Run #3 built a perfectly good video and then exited 1 because
+    # the Page did not exist yet, which is a red tick for no reason.
+    import poster_fb_reels
+    import poster_youtube_shorts
 
-    try:
-        from poster_youtube_shorts import post_to_youtube_shorts
-        results["youtube"] = post_to_youtube_shorts(path, spec)
-    except Exception as e:
-        failures.append(f"youtube: {e}")
-        print(f"  YouTube failed: {e}")
+    if not poster_fb_reels.configured():
+        skipped.append("facebook (no FB_PAGE_ID / FB_PAGE_ACCESS_TOKEN)")
+    else:
+        try:
+            results["facebook"] = poster_fb_reels.post_to_fb_reels(path, caption)
+            print("  Facebook Reel published")
+        except Exception as e:
+            failures.append(f"facebook: {e}")
+            print(f"  Facebook failed: {e}")
+
+    if not poster_youtube_shorts.configured():
+        skipped.append("youtube (no YOUTUBE_* secrets)")
+    else:
+        try:
+            results["youtube"] = poster_youtube_shorts.post_to_youtube_shorts(
+                path, spec)
+        except Exception as e:
+            failures.append(f"youtube: {e}")
+            print(f"  YouTube failed: {e}")
 
     _log(spec, results)
 
-    # Any platform failing fails the job. The sibling repo only fails when ALL
-    # platforms fail, and that is exactly what hid a broken poster for a month
-    # behind a green tick.
+    if skipped:
+        print("\nSkipped (not set up yet): " + "; ".join(skipped))
+    # Any CONFIGURED platform failing fails the job. The sibling repo only
+    # fails when ALL platforms fail, and that is exactly what hid a broken
+    # poster for a month behind a green tick.
     if failures:
         print("\nFAILED: " + "; ".join(failures))
         return 1
+    if not results:
+        print("\nNothing was published — no platform is configured yet. "
+              "The video is in out/ and as the run's artifact.")
     return 0
 
 

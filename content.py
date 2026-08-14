@@ -56,6 +56,13 @@ For each scene:
 
 Rules:
 - The hook is a question or a sharp claim, and it must work with no sound.
+- The hook must NOT promise to tell them something. "aaj wajah batate hain",
+  "aaj hum seekhenge", "jaaniye" — all banned. Those spend the only two
+  seconds you are given announcing that the video exists. Put the claim itself
+  in the hook: name the cause, or the number, or the mistake, immediately.
+- No scene may open by describing what the video will do. Say the thing.
+- The "follow" scene asks once, plainly, and names what they get by following.
+  It is not a summary of the video they just watched.
 - Each "tactic" is ONE concrete thing to do today, with a when or a how much
   that is about routine and timing, never a medical quantity.
 - "action" is the single smallest thing to try tonight.
