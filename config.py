@@ -41,6 +41,7 @@ DEFAULT_CLAUDE_MODEL = os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 # The whole channel's subject, in one place. Everything downstream — topics,
 # the writing prompt, the safety guard, the hashtags — reads from here, so a
 # second channel is a second profile, not a second repo.
+# The channel is "Sakoon Zindagi" — health, sleep and peaceful living.
 NICHE = os.environ.get("NICHE") or "daily"
 
 # ------------------------------------------------------------------- geometry
@@ -131,22 +132,27 @@ CLOUD_TTS_VOICES = [
 # Slightly under 1.0 is the whole "sakoon" register in one number.
 CLOUD_TTS_RATE = float(os.environ.get("CLOUD_TTS_RATE") or 0.94)
 CLOUD_TTS_PITCH = float(os.environ.get("CLOUD_TTS_PITCH") or 0.0)
-# Female, bright, young. Charon is a male voice and it read the first live
-# video like a documentary narrator — wrong register for a feed where the whole
-# job of the first two seconds is to sound like a person talking to you.
-GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Leda"
+# Calm and settled, matching the channel's name. Chosen over a bright, quick
+# read: these topics are watched late at night, and someone who came for
+# sakoon and got a hype voice is gone in the first second. Algenib is soft and
+# clear; Charon is deeper if a heavier read is wanted.
+GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Algenib"
 
 # Tier 3. OpenAI ships no Urdu voice — this reads Urdu with an English-trained
 # voice and the accent is audibly wrong. It is a parachute, not a peer of the
 # Gemini tiers.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
-OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE") or "nova"
+# Warm and unhurried rather than bright. Same register decision as the
+# Gemini voice above.
+OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE") or "shimmer"
 
 # Attempts per tier before handing to the next one.
 TTS_ATTEMPTS = int(os.environ.get("TTS_ATTEMPTS") or 2)
 EDGE_TTS_UR_VOICE = os.environ.get("EDGE_TTS_UR_VOICE") or "ur-PK-UzmaNeural"
-EDGE_TTS_RATE = os.environ.get("EDGE_TTS_RATE") or "+8%"
+# Below zero on purpose: Edge is the free floor and reads fast by default,
+# which is the opposite of this channel.
+EDGE_TTS_RATE = os.environ.get("EDGE_TTS_RATE") or "-6%"
 GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_TTS_MIN_INTERVAL") or 6)
 GEMINI_MAX_BACKOFF = float(os.environ.get("GEMINI_TTS_MAX_BACKOFF") or 75)
 

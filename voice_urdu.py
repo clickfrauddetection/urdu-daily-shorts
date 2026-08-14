@@ -55,11 +55,16 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 CLOUD_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
 OPENAI_URL = "https://api.openai.com/v1/audio/speech"
 
+# Only the Gemini tiers read this; Cloud TTS takes no prompt and gets its
+# delivery from CLOUD_TTS_RATE instead. The register is the channel's name:
+# Sakoon Zindagi. An energetic read was tried first and is wrong here — a
+# viewer who came for calm and got a hype voice leaves in the first second,
+# and these topics are watched late at night.
 STYLE = os.environ.get("GEMINI_TTS_STYLE", "").strip() or (
-    "Yeh Urdu mein parho, saaf Urdu talaffuz ke saath. Ek nau-jawan larki ki "
-    "aawaz — zinda, garam-josh aur dostana, jaise apni saheli ko koi dilchasp "
-    "baat bata rahi ho. Halka sa josh, natural pauses, sawal par lehja upar. "
-    "Na khabarnama, na eshtehar."
+    "Yeh Urdu mein parho, saaf Urdu talaffuz ke saath. Lehja nihayat "
+    "pur-sukoon, dheema aur thehra hua ho — hamdardana aur naram, jaise kisi "
+    "apne ko raat ke waqt aaram ka mashwara de rahe ho. Bina kisi jaldi ke, "
+    "kushada pauses ke saath. Na khabarnama, na eshtehar, na koi josh."
 )
 
 # Keyed by engine label. Set once when that engine says the rest of the run is
