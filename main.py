@@ -94,8 +94,7 @@ def build(spec: dict, name: str) -> tuple[str, float]:
     leads, durations, starts, total = plan(voices)
     print(f"Building {name}: {len(scenes)} scenes, {total:.1f}s")
 
-    theme = stock_bg.theme_for(NICHE)
-    bg = stock_bg.fetch(theme)
+    bg = stock_bg.fetch(NICHE)
 
     print("Rendering layers")
     composed, bg_offset = [], 0.0
