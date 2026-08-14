@@ -15,6 +15,12 @@ on:
         type: boolean
         default: false
 
+# The last step commits data/posted_log.json back. Without this the default
+# GITHUB_TOKEN is read-only on a new repo and that push fails — after the video
+# has already published, so the next run re-picks the same topic.
+permissions:
+  contents: write
+
 jobs:
   build-and-post:
     runs-on: ubuntu-latest
