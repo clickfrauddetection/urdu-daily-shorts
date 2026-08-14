@@ -101,16 +101,29 @@ AUDIO_SAMPLE_RATE = 48000
 # named GenerateRequestsPerDayPerProjectPerModel, per model, so a spent daily
 # cap on the first costs the video nothing.
 #
-# gemini-3.1-flash-tts-preview is deliberately NOT here, and was briefly first
-# by my mistake. time-lens-urdu has been narrating Urdu with these models for
-# months and its chain excludes 3.1 with a note: it answers HTTP 500 INTERNAL
-# on every request. 2.5 Flash and its lite sibling are the two that work.
+# This order is from THIS repo's own live runs, not from another repo's notes.
+# Both matter, and they disagreed:
 #
-# 2.5 Pro TTS is the obvious third and is left out on cost — it bills at a much
-# higher rate per character and two Flash buckets cover a 60-second video many
-# times over. Add it to the GEMINI_TTS_MODELS variable if a day ever burns both.
+#   gemini-3.1-flash-tts-preview       WORKS on this key — narrated all eight
+#                                      scenes of the 2026-08-14 run. It is
+#                                      first because it is the only model here
+#                                      actually observed producing audio.
+#   gemini-3.1-flash-lite-tts-preview  404, observed. Removed, not demoted.
+#   gemini-2.5-*                       unproven here; behind the working one.
+#
+# time-lens-urdu's chain excludes 3.1 with a note saying it answers HTTP 500 on
+# every request, and I moved this repo to 2.5 on the strength of that — which
+# was wrong, because 3.1 was already narrating here. A model id that fails on
+# one project can be fine on another: enablement and allowlisting are per
+# project. A log from the account in question outranks a comment from a repo
+# that runs on a different one.
+#
+# They are also separate daily quota buckets — the quota is literally named
+# GenerateRequestsPerDayPerProjectPerModel — so the ones behind the leader are
+# not decoration; they are what a spent cap falls through to.
 GEMINI_TTS_MODELS = [
     m.strip() for m in (os.environ.get("GEMINI_TTS_MODELS") or
+                        "gemini-3.1-flash-tts-preview,"
                         "gemini-2.5-flash-preview-tts,"
                         "gemini-2.5-flash-lite-preview-tts").split(",")
     if m.strip()
