@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 import assembler
 import content
 import guard
+import replicate_bg
 import stock_bg
 import voice_urdu
 from config import (
@@ -84,7 +85,7 @@ def plan(voices: list[dict]) -> tuple[list[float], list[float], list[float], flo
     return leads, durations, starts, clock
 
 
-def build(spec: dict, name: str) -> tuple[str, float]:
+def build(spec: dict, name: str, pillar: str) -> tuple[str, float]:
     scenes = spec["scenes"]
 
     print("Narrating")
@@ -94,7 +95,10 @@ def build(spec: dict, name: str) -> tuple[str, float]:
     leads, durations, starts, total = plan(voices)
     print(f"Building {name}: {len(scenes)} scenes, {total:.1f}s")
 
-    bg = stock_bg.fetch(NICHE)
+    # Real footage first; generate one only when there is none. Stock is free,
+    # and a real clip of a real room still beats a generated one at holding a
+    # viewer — the generated path is the parachute, not the plan.
+    bg = stock_bg.fetch(pillar) or replicate_bg.fetch(pillar)
 
     print("Rendering layers")
     composed, bg_offset = [], 0.0
@@ -126,6 +130,10 @@ def _log(spec: dict, results: dict) -> None:
     entries.append({
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "niche": NICHE,
+        # The pillar is logged because the rotation reads the log back: it
+        # picks tomorrow's pillar from how many videos exist, and picks the
+        # topic by skipping what is already here.
+        "pillar": spec.get("pillar", ""),
         "topic": spec["topic"],
         "title": spec.get("title", ""),
         "results": results,
@@ -139,6 +147,8 @@ def main() -> int:
     ap.add_argument("--post", action="store_true",
                     help="publish to Facebook Reels and YouTube Shorts")
     ap.add_argument("--topic", help="script this topic instead of the queue's next")
+    ap.add_argument("--pillar", help="with --topic: which pillar it belongs to, "
+                                     "which picks the background")
     args = ap.parse_args()
     _utf8_console()
 
@@ -148,9 +158,12 @@ def main() -> int:
     os.makedirs(TEMP_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    topic = args.topic or content.next_topic()
-    print(f"Topic: {topic}")
-    spec = content.write_script(topic)
+    if args.topic:
+        topic, pillar = args.topic, (args.pillar or NICHE)
+    else:
+        topic, pillar = content.next_topic()
+    print(f"Topic: {topic}   [{pillar}]")
+    spec = content.write_script(topic, pillar)
     guard.check(spec)
 
     name = f"{NICHE}_{datetime.now().strftime('%Y%m%d')}"
@@ -159,7 +172,7 @@ def main() -> int:
     with open(os.path.join(OUT_DIR, f"{name}.json"), "w", encoding="utf-8") as f:
         json.dump(spec, f, ensure_ascii=False, indent=2)
 
-    path, total = build(spec, name)
+    path, total = build(spec, name, pillar)
 
     if not args.post:
         print("\nDRY RUN — nothing was posted. Watch the file above, "

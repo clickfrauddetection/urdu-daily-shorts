@@ -55,12 +55,15 @@ jobs:
           # Tier 3 of the voice ladder; the run works without it.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          # Background fallback only — unused on a day Pixabay answers.
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          REPLICATE_BG_MODE: ${{ vars.REPLICATE_BG_MODE }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          NICHE: ${{ vars.NICHE || 'sleep' }}
+          NICHE: ${{ vars.NICHE || 'daily' }}
         run: |
           python main.py \
             ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \

@@ -75,7 +75,9 @@ same YouTube OAuth client. Nothing here needs a new app.
 |---|---|
 | `ANTHROPIC_API_KEY` | writing the script |
 | `GEMINI_API_KEY` | the good voice (falls back to free Edge TTS without it) |
-| `PIXABAY_API_KEY` | background footage (falls back to a flat gradient) |
+| `OPENAI_API_KEY` | tier 3 of the voice ladder (optional) |
+| `PIXABAY_API_KEY` | background footage |
+| `REPLICATE_API_TOKEN` | generating a background when Pixabay has none (optional) |
 | `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN` | Facebook Reels |
 | `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` | Shorts |
 
@@ -120,10 +122,39 @@ is cheap by comparison.
 
 Both disclaimers ride on every caption and description.
 
-## Adding topics
+## Topics and pillars
 
-`data/topics.json`, keyed by niche, drained in order and matched against
-`data/posted_log.json`. Filled by hand, never by the model: a model asked daily
-to "think of a good topic" converges within about two weeks and starts
-rewording the same four ideas. The queue running low prints a warning; running
-out is a hard error rather than a quiet decline in quality.
+`data/topics.json`, keyed by niche. A niche is either a flat list, or an object
+of **pillar → topics** — and the object form rotates.
+
+The default niche `daily` has seven pillars: `neend`, `paisa`, `waqt`, `phone`,
+`ghar`, `aadat`, `rishtay`. Each day's pillar is chosen by how many videos the
+channel has already posted, so day 1 is sleep, day 2 is money, day 8 is sleep
+again. A broad channel that ran five sleep topics in a row would be read as a
+sleep channel by viewers and by the algorithm; the rotation is what keeps it
+broad in practice rather than only in the topic file.
+
+The pillar also picks the **background** — `stock_bg.THEMES` and
+`replicate_bg.PILLAR_PROMPT` are both keyed by it, so a money topic opens on a
+city skyline and not on a night sky. Adding a pillar means adding an entry to
+all three.
+
+Topics are filled by hand, never by the model: a model asked daily to "think of
+a good topic" converges within about two weeks and starts rewording the same
+four ideas. An exhausted pillar hands the day to the next one; every pillar
+exhausted is a hard error rather than a quiet decline in quality.
+
+## Backgrounds
+
+Three tiers, in order:
+
+1. **Pixabay** — free stock footage. One clip for the whole video. Every theme
+   for the pillar is tried, shuffled, three attempts each with a rising
+   backoff, then generic terms. A rejected key short-circuits the chain.
+2. **Replicate** (`replicate_bg.py`) — only when Pixabay found nothing. Default
+   `REPLICATE_BG_MODE=still`: one FLUX image (~$0.003), looped, animated by the
+   compositor's existing drift. `motion` adds an LTX-Video clip (~$0.057) —
+   worth knowing that tiktok-reels-agent turned that off because the clips came
+   back uneven and one visibly spoiled a published video.
+3. **A flat gradient.** Never an error. It is printed loudly, because a channel
+   quietly running on gradients for a week is the failure worth worrying about.

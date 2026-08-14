@@ -1,58 +1,92 @@
 {
-  "_comment": "One topic per video, drained in order, matched against data/posted_log.json so nothing repeats. Filled by hand on purpose — see content.py. Keep every entry about routine, timing and habit; anything that names a condition will be rejected by guard.py before a frame is rendered.",
+  "_comment": "A niche is either a flat list of topics, or an object of pillar -> topics. A pillar object rotates: consecutive days come from different pillars, so a broad channel does not run five sleep videos in a row and read as a sleep channel. Filled by hand on purpose (see content.py) — a model asked daily for a topic converges within about two weeks. The pillar name also picks the background footage (stock_bg.THEMES) and the generated fallback prompt (replicate_bg.PILLAR_PROMPT), so a money topic does not open on a night sky.",
+
+  "daily": {
+    "neend": [
+      "raat ko bistar par phone dekhne se neend kyun der se aati hai",
+      "roz ek hi waqt par sona kyun sab se bara farq daalta hai",
+      "subah ki dhoop ka raat ki neend se taalluq",
+      "sone se pehle aakhri do ghante ka routine",
+      "kamre ka andhera kitna zaroori hai",
+      "raat ko dimaag chalta rehta hai to kya karein",
+      "din mein qailoola — kitna aur kab",
+      "subah alarm ke baad dobara sona kyun bura lagta hai",
+      "chhutti wale din der tak sona — asal qeemat",
+      "neend poori na ho to agle din kya karein"
+    ],
+    "paisa": [
+      "tankhwah aate hi sab se pehla kaam",
+      "chhoti chhoti kharidari jo mahine ka budget kha jaati hai",
+      "har mahine kitna bachana asal mein mumkin hai",
+      "udhaar dene se pehle ek sawal",
+      "online sale par kharidne se pehle chobees ghante",
+      "ghar ka kharcha likhne ki purani aadat",
+      "emergency ke liye alag paise kyun",
+      "mehngi cheez sasti kaise par jaati hai",
+      "bachon ko paison ki baat kab batayein",
+      "mahine ke aakhri hafte ka masla"
+    ],
+    "waqt": [
+      "subah ka pehla ghanta kis kaam ke liye rakhein",
+      "aik waqt mein aik kaam",
+      "kaam ke darmiyan wafqa kaise lein",
+      "kal par taalne ki aadat kaise tootegi",
+      "din ka sab se mushkil kaam kab karein",
+      "list banane ka sahih tareeqa",
+      "na kehna seekhna",
+      "shaam ko agle din ki tayyari",
+      "mez par kya rakha ho aur kya na ho",
+      "chhoti chhoti rukawatein jo poora din kha jaati hain"
+    ],
+    "phone": [
+      "subah uth kar sab se pehle phone dekhna",
+      "notifications band karne ka farq",
+      "scroll karte karte waqt kahan jaata hai",
+      "khaana khate waqt phone",
+      "bachon ke saamne apna phone",
+      "phone ko kamre se bahar rakhna",
+      "sirf ek app par roz kitna waqt",
+      "khabrein kitni baar dekhna kaafi hai"
+    ],
+    "ghar": [
+      "roz das minute ki safai",
+      "cheezon ki apni jagah",
+      "subah bistar theek karna",
+      "kitchen ka sink raat ko khali",
+      "ghar mein kaam ka batwara",
+      "purani cheezein rakhne ki aadat",
+      "mehmaan aane se pehle das minute",
+      "kamre ki roshni aur mizaaj"
+    ],
+    "aadat": [
+      "nayi aadat kitne din mein banti hai",
+      "chhoti shuruaat kyun kaam karti hai",
+      "aadat toot jaye to dobara kaise shuru karein",
+      "roz chalne ki aadat kaise shuru ho",
+      "pani peene ka waqt yaad kaise rahe",
+      "khaana kis waqt khatam karein",
+      "shaam ki chehal qadmi",
+      "din bhar baithe rehne ka tor",
+      "har hafte ek ghanta apne liye",
+      "hafte ke aakhir mein hisaab"
+    ],
+    "rishtay": [
+      "sun-na seekhna",
+      "ghar aa kar pehle das minute",
+      "bina phone ke ek waqt ka khaana",
+      "maafi maangne ka sahih waqt",
+      "walidain ko roz ek call",
+      "bachon se sawal poochne ka andaz",
+      "naraazgi ko raat bhar na rakhna",
+      "shukriya kehne ki aadat"
+    ]
+  },
 
   "sleep": [
     "raat ko bistar par phone dekhne se neend kyun der se aati hai",
     "roz ek hi waqt par sona kyun sab se bara farq daalta hai",
     "subah ki dhoop ka raat ki neend se taalluq",
     "sone se pehle aakhri do ghante ka routine",
-    "kamre ka andhera kitna zaroori hai",
-    "shaam ki chai aur neend — waqt ka masla",
-    "raat ko dimaag chalta rehta hai to kya karein",
-    "neend se pehle likhne ki aadat",
-    "din mein qailoola — kitna aur kab",
-    "kamre ka darja hararat aur aaram ki neend",
-    "subah alarm ke baad dobara sona kyun bura lagta hai",
-    "raat ko bhaari khana kitni der pehle",
-    "sone se pehle garam pani se munh dhona",
-    "bistar sirf sone ke liye — ek purani aadat",
-    "raat ko jaag jayein to bistar par lete rehna theek hai ya nahi",
-    "shaam ki halki chehal qadmi",
-    "chhutti wale din der tak sona — asal qeemat",
-    "raat ki roshni ka rang",
-    "sone se pehle khabrein dekhne ki aadat",
-    "neend ka pehla ghanta sab se qeemti kyun hai",
-    "din bhar pani aur shaam ki thakan",
-    "sone se pehle saans ki sadi hui mashq",
-    "kamre ka shor aur sunaai na dene wali awaz",
-    "raat ko waqt dekhne ki aadat chhorna",
-    "subah uth kar sab se pehle kya karein",
-    "shaam ke baad warzish — faida ya nuqsan",
-    "bistar ki safai aur neend ka mizaaj",
-    "sone se pehle mausiqi ya khamoshi",
-    "raat ko kal ki fikar — usse kaise rokein",
-    "hafte bhar ka neend ka hisaab",
-    "sardiyon mein jaldi neend kyun aati hai",
-    "garmi ki raaton mein aaram se sona",
-    "safar ke baad neend ka waqt theek karna",
-    "bachon ka sone ka waqt aur ghar ka mahaul",
-    "raat ki shift ke baad din mein sona",
-    "sone se pehle padhne ki aadat",
-    "subah ki chai ka waqt",
-    "neend poori na ho to agle din kya karein",
-    "bistar par lait kar kaam karna",
-    "shaam ko kamre ki roshni dheemi karna",
-    "sone se pehle nahaana — kab aur kitna garam",
-    "raat ko dimaag ko band karne ka aasan tareeqa",
-    "chaar hafton mein sone ka waqt theek karna",
-    "neend ki aadat kitne din mein banti hai"
-  ],
-
-  "focus": [
-    "subah ka pehla ghanta kis kaam ke liye rakhein",
-    "phone door rakhne ka asli farq",
-    "aik waqt mein aik kaam",
-    "kaam ke darmiyan wafqa kaise lein",
-    "mez par kya rakha ho aur kya na ho"
+    "kamre ka andhera kitna zaroori hai"
   ]
 }

@@ -28,16 +28,28 @@ SIZE_PREFERENCE = ["large", "medium", "small", "tiny"]
 # Calm, slow, loopable, and — the constraint that matters — nothing with a
 # recognisable face. A stock actor's face on a daily channel reads as a stock
 # video within three posts, and viewers stop trusting the account.
+# Keyed by PILLAR, not by channel. A broad channel runs a money topic on
+# Tuesday and a sleep topic on Wednesday, and one shared theme list would open
+# both on a night sky — which tells the viewer, in the first second, that the
+# picture has nothing to do with the words.
 THEMES = {
+    "neend": ["night sky stars", "moon clouds night", "calm bedroom window",
+              "rain on window night", "candle flame dark", "fog forest morning"],
+    "paisa": ["city skyline timelapse", "market street busy", "coins macro",
+              "office window evening", "shopping street evening"],
+    "waqt": ["clock ticking macro", "desk sunlight morning", "sand timer",
+             "book pages turning", "traffic timelapse day"],
+    "phone": ["city lights night timelapse", "rain window desk",
+              "abstract light bokeh", "dark room screen glow"],
+    "ghar": ["sunlight through curtains", "calm bedroom window",
+             "plant leaves sunlight", "kitchen window morning"],
+    "aadat": ["park path morning", "running shoes road", "water pouring glass",
+              "mountain trail sunrise", "ocean waves slow"],
+    "rishtay": ["sunset field warm", "tea cup steam", "park bench evening",
+                "warm light window"],
+    # Kept for the older flat niches.
     "sleep": ["night sky stars", "moon clouds night", "calm bedroom window",
-              "rain on window night", "city lights night timelapse",
-              "candle flame dark", "fog forest morning"],
-    "focus": ["desk sunlight morning", "coffee pour slow motion",
-              "book pages turning", "rain window desk", "clock ticking macro"],
-    "money": ["city skyline timelapse", "market street busy", "coins macro",
-              "office window evening", "traffic timelapse night"],
-    "fitness": ["running shoes road", "mountain trail sunrise",
-                "water pouring glass", "park path morning", "ocean waves slow"],
+              "rain on window night", "candle flame dark"],
     "default": ["clouds timelapse", "ocean waves slow", "forest light rays",
                 "rain on window night", "mountain sunrise"],
 }

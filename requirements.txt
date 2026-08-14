@@ -1,5 +1,6 @@
 anthropic>=0.40
 playwright>=1.45
+replicate>=0.34
 requests>=2.31
 edge-tts>=6.1
 google-api-python-client>=2.130

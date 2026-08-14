@@ -80,34 +80,67 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-def _posted_topics() -> set[str]:
+def _posted() -> list[dict]:
     if not os.path.exists(LOG_FILE):
-        return set()
+        return []
     with open(LOG_FILE, encoding="utf-8") as f:
         try:
-            return {e.get("topic", "") for e in json.load(f)}
+            return json.load(f)
         except json.JSONDecodeError:
-            return set()
+            return []
 
 
-def next_topic() -> str:
-    """The first queued topic this channel has not already posted."""
+def next_topic() -> tuple[str, str]:
+    """The next topic and its pillar.
+
+    A niche is either a flat list, or an object of pillar -> topics. The object
+    form ROTATES: the pillar is chosen by how many videos this channel has
+    already posted, so a broad channel does not run five sleep videos in a row
+    and get read — by viewers and by the algorithm — as a sleep channel. Within
+    a pillar the order is as written, and anything already in the posted log is
+    skipped.
+    """
     if not os.path.exists(TOPICS_FILE):
         raise RuntimeError(f"{TOPICS_FILE} not found — the queue is the input")
     with open(TOPICS_FILE, encoding="utf-8") as f:
-        queue = json.load(f).get(NICHE, [])
-    done = _posted_topics()
-    remaining = [t for t in queue if t not in done]
-    if not remaining:
-        raise RuntimeError(
-            f"Every topic for niche {NICHE!r} has been posted. Add more to "
-            f"{TOPICS_FILE} — do not let the model invent them.")
-    if len(remaining) <= 7:
-        print(f"  WARNING: only {len(remaining)} topics left for {NICHE!r}")
-    return remaining[0]
+        queue = json.load(f).get(NICHE)
+    if not queue:
+        raise RuntimeError(f"{TOPICS_FILE} has no topics for niche {NICHE!r}")
+
+    entries = _posted()
+    done = {e.get("topic", "") for e in entries}
+
+    if isinstance(queue, list):
+        remaining = [t for t in queue if t not in done]
+        if not remaining:
+            raise RuntimeError(
+                f"Every topic for {NICHE!r} has been posted. Add more to "
+                f"{TOPICS_FILE} — do not let the model invent them.")
+        if len(remaining) <= 7:
+            print(f"  WARNING: only {len(remaining)} topics left for {NICHE!r}")
+        return remaining[0], NICHE
+
+    pillars = list(queue)
+    start = len(entries) % len(pillars)
+    # Walk from the pillar whose turn it is, so an exhausted pillar hands the
+    # day to the next one instead of ending the channel.
+    for step in range(len(pillars)):
+        pillar = pillars[(start + step) % len(pillars)]
+        remaining = [t for t in queue[pillar] if t not in done]
+        if remaining:
+            if step:
+                print(f"  {pillars[start]!r} is empty — taking {pillar!r} today")
+            left = sum(len([t for t in v if t not in done]) for v in queue.values())
+            if left <= 10:
+                print(f"  WARNING: only {left} topics left across all pillars")
+            return remaining[0], pillar
+
+    raise RuntimeError(
+        f"Every topic in every pillar of {NICHE!r} has been posted. Add more "
+        f"to {TOPICS_FILE} — do not let the model invent them.")
 
 
-def write_script(topic: str) -> dict:
+def write_script(topic: str, pillar: str = "") -> dict:
     """Ask Claude for the day's script and validate its shape before returning.
 
     Validated here rather than at render time because a malformed script that
@@ -122,7 +155,7 @@ def write_script(topic: str) -> dict:
         max_tokens=8000,
         system=SYSTEM,
         messages=[{"role": "user", "content": TEMPLATE.format(
-            topic=topic, niche=NICHE, icons=", ".join(known_icons()),
+            topic=topic, niche=pillar or NICHE, icons=", ".join(known_icons()),
             max_secs=MAX_DURATION)}],
     )
     raw = "".join(b.text for b in msg.content if b.type == "text").strip()
@@ -150,6 +183,7 @@ def write_script(topic: str) -> dict:
             s["icon"] = None
 
     spec["topic"] = topic
+    spec["pillar"] = pillar or NICHE
     words = sum(len(s["spoken"].split()) for s in scenes)
     print(f"  script: {len(scenes)} scenes, {words} spoken words")
     return spec

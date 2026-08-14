@@ -11,6 +11,20 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 PIXABAY_API_KEY = os.environ.get("PIXABAY_API_KEY", "")
 
+# Only ever used as the background fallback when Pixabay comes back with
+# nothing — see replicate_bg.py. "still" generates one FLUX image and lets the
+# compositor's drift animate it (~$0.003); "motion" adds an LTX-Video clip on
+# top (~$0.057, and the sibling repo turned it off because the clips came back
+# uneven). Nothing here runs on a normal day.
+REPLICATE_API_KEY = os.environ.get("REPLICATE_API_TOKEN", "")
+REPLICATE_BG_MODE = (os.environ.get("REPLICATE_BG_MODE") or "still").lower()
+
+# Replicate hangs for minutes under provider load often enough to need a hard
+# wall-clock bound per attempt, not just a request timeout.
+IMAGE_GEN_TIMEOUT = int(os.environ.get("IMAGE_GEN_TIMEOUT") or 60)
+MOTION_GEN_TIMEOUT = int(os.environ.get("MOTION_GEN_TIMEOUT") or 180)
+IMAGE_GEN_RETRIES = int(os.environ.get("IMAGE_GEN_RETRIES") or 3)
+
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID", "")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN", "")
 GRAPH_API_VERSION = "v21.0"
@@ -27,7 +41,7 @@ DEFAULT_CLAUDE_MODEL = os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 # The whole channel's subject, in one place. Everything downstream — topics,
 # the writing prompt, the safety guard, the hashtags — reads from here, so a
 # second channel is a second profile, not a second repo.
-NICHE = os.environ.get("NICHE") or "sleep"
+NICHE = os.environ.get("NICHE") or "daily"
 
 # ------------------------------------------------------------------- geometry
 WIDTH, HEIGHT = 1080, 1920
