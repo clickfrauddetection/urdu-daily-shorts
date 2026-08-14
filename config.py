@@ -82,7 +82,11 @@ HARD_MAX_DURATION = float(os.environ.get("HARD_MAX_DURATION") or 80.0)
 
 # ---------------------------------------------------------------------- audio
 VOICE_TARGET_LUFS = -16
-MUSIC_BED_LUFS = -30
+# -26, up from -30. Four dB is a clearly audible lift and the bed now reads as
+# part of the video rather than as something left on by accident. It is still
+# ~10 LU under the voice, which is inside the usual broadcast voice-over gap —
+# going much past this starts costing intelligibility on a phone speaker.
+MUSIC_BED_LUFS = float(os.environ.get("MUSIC_BED_LUFS") or -26)
 DUCK_THRESHOLD = 0.02
 DUCK_RATIO = 3
 AUDIO_SAMPLE_RATE = 48000

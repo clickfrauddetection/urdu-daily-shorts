@@ -25,6 +25,11 @@ FALLBACK_BG = "0x0A1628"
 # How far out of focus the footage sits. 0 turns the grade off entirely.
 BG_BLUR = float(os.environ.get("BG_BLUR") or 9)
 
+# Flattens the bed's own dynamics before it is levelled and ducked. 4:1 above
+# roughly -24 dBFS, slow enough not to breathe on the beat.
+MUSIC_TAME = os.environ.get("MUSIC_TAME") or (
+    "acompressor=threshold=-24dB:ratio=4:attack=80:release=600:makeup=2")
+
 # A track plays on a public Page under the channel's name, so every file here
 # needs a licence someone actually read. A track with no entry is SKIPPED, not
 # played with a shrug — the sibling repo carries four files that arrived in a
@@ -162,27 +167,39 @@ def mux_voice(video_path: str, clips: list[dict], starts: list[float],
     return video_path
 
 
-def pick_music() -> tuple[str | None, str]:
-    """A licensed track from data/music, and its credit line.
+# The bed, pinned rather than rotated. Measured with ebur128 — all three files
+# sit at the same -14.4 LUFS, so "the loudest" does not separate them; what
+# separates them is movement:
+#
+#   timelens_bed_choir_dark.mp3   LRA  2.9 LU   flattest
+#   timelens_bed_choir.mp3        LRA  6.4 LU
+#   timelens_bed_swell.mp3        LRA 16.5 LU   the one that builds
+#
+# swell is the one that reads as "fast and loud", and it is the pick — but a
+# 16.5 LU swing under continuous narration is a real problem: it vanishes in
+# the quiet passages and climbs over the voice in the loud ones, and the
+# sidechain ducker pumps chasing it. `MUSIC_TAME` below is what makes it usable
+# rather than just louder.
+MUSIC_TRACK = os.environ.get("MUSIC_TRACK") or "timelens_bed_swell.mp3"
 
-    Chosen at random rather than taking the first one alphabetically: this
-    posts daily, and the same thirty seconds of choir under every video for a
-    month is the fastest way to make a channel sound like a template.
-    """
+
+def pick_music() -> tuple[str | None, str]:
+    """The pinned track, or the first licensed one if it is missing."""
     if not os.path.isdir(MUSIC_DIR):
         return None, ""
-    usable = []
+    licensed = [fn for fn in sorted(os.listdir(MUSIC_DIR))
+                if fn.lower().endswith((".mp3", ".m4a", ".wav"))
+                and fn in MUSIC_ATTRIBUTION]
     for fn in sorted(os.listdir(MUSIC_DIR)):
-        if not fn.lower().endswith((".mp3", ".m4a", ".wav")):
-            continue
-        if fn not in MUSIC_ATTRIBUTION:
+        if (fn.lower().endswith((".mp3", ".m4a", ".wav"))
+                and fn not in MUSIC_ATTRIBUTION):
             print(f"  skipping {fn}: no entry in assembler.MUSIC_ATTRIBUTION. "
                   f"Add the licence line before this track can be used.")
-            continue
-        usable.append(fn)
-    if not usable:
+    if not licensed:
         return None, ""
-    fn = random.choice(usable)
+    fn = MUSIC_TRACK if MUSIC_TRACK in licensed else licensed[0]
+    if fn != MUSIC_TRACK:
+        print(f"  {MUSIC_TRACK} not in data/music — using {fn}")
     print(f"  music bed: {fn}")
     return os.path.join(MUSIC_DIR, fn), MUSIC_ATTRIBUTION[fn]
 
@@ -206,9 +223,16 @@ def add_music(video_path: str, duration: float) -> str:
         capture_output=True, text=True).stdout.strip()
 
     fade_out = max(duration - 2.0, 0)
+    # Tamed BEFORE it is levelled. loudnorm sets an average; it does not stop a
+    # 16.5 LU track from disappearing under one line and climbing over the
+    # next. The compressor pulls the swings toward the middle first, so the bed
+    # arrives at a roughly constant level and the sidechain ducker below has
+    # one job — getting out of the way of speech — instead of also chasing the
+    # music's own build.
     bed = (f"[1:a]aloop=loop=-1:size=2e9,atrim=0:{duration:.3f},"
+           f"{MUSIC_TAME},"
            f"afade=t=in:st=0:d=1.5,afade=t=out:st={fade_out:.3f}:d=2,"
-           f"loudnorm=I={MUSIC_BED_LUFS}:TP=-8:LRA=7")
+           f"loudnorm=I={MUSIC_BED_LUFS}:TP=-8:LRA=5")
 
     if has_audio:
         chain = (f"[0:a]aresample={AUDIO_SAMPLE_RATE},asplit=2[v][sc];{bed}[b];"
