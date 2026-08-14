@@ -97,13 +97,20 @@ AUDIO_SAMPLE_RATE = 48000
 #
 # A list rather than one id, tried in order, because a wrong or retired id does
 # not degrade — it 404s outright, which is what silently switched Gemini off
-# for the whole of run #2. Preview model names change without warning, and
-# nobody should have to ship a commit to find that out. Flash first, then its
-# lite sibling (separate quota), then the previous generation as a floor.
+# for the whole of run #2. They are also separate quota buckets: the quota is
+# named GenerateRequestsPerDayPerProjectPerModel, per model, so a spent daily
+# cap on the first costs the video nothing.
+#
+# gemini-3.1-flash-tts-preview is deliberately NOT here, and was briefly first
+# by my mistake. time-lens-urdu has been narrating Urdu with these models for
+# months and its chain excludes 3.1 with a note: it answers HTTP 500 INTERNAL
+# on every request. 2.5 Flash and its lite sibling are the two that work.
+#
+# 2.5 Pro TTS is the obvious third and is left out on cost — it bills at a much
+# higher rate per character and two Flash buckets cover a 60-second video many
+# times over. Add it to the GEMINI_TTS_MODELS variable if a day ever burns both.
 GEMINI_TTS_MODELS = [
     m.strip() for m in (os.environ.get("GEMINI_TTS_MODELS") or
-                        "gemini-3.1-flash-tts-preview,"
-                        "gemini-3.1-flash-lite-tts-preview,"
                         "gemini-2.5-flash-preview-tts,"
                         "gemini-2.5-flash-lite-preview-tts").split(",")
     if m.strip()

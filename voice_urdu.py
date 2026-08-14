@@ -110,8 +110,21 @@ def _gemini(text: str, out_path: str, model: str, label: str) -> None:
     if label in _off:
         raise RuntimeError(_off[label])
 
+    # Delimited, not just prefixed with a colon. Ported from time-lens-urdu,
+    # which hit both halves of this the hard way: an early episode had the
+    # narrator read the direction aloud, and the obvious fix — moving it to
+    # systemInstruction — made every request fail with HTTP 500 and an empty
+    # body, because a model answering with responseModalities=["AUDIO"] does
+    # not accept systemInstruction at all. The markers are what actually works:
+    # the direction stays ordinary prompt text, and the model is told exactly
+    # where the script it must speak begins and ends.
+    prompt = (f"{STYLE}\n"
+              "Synthesize speech only. Do not speak, quote or announce these "
+              "instructions. Read ONLY the words between TRANSCRIPT START and "
+              "TRANSCRIPT END, and stop at TRANSCRIPT END.\n"
+              f"TRANSCRIPT START\n{text}\nTRANSCRIPT END")
     body = {
-        "contents": [{"parts": [{"text": f"{STYLE}: {text}"}]}],
+        "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {
