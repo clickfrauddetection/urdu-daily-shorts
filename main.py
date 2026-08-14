@@ -26,12 +26,28 @@ from config import (
     NICHE, HOOK_LEAD, SCENE_PAD, MAX_DURATION, TEMP_DIR, OUT_DIR, LOG_FILE,
 )
 from renderer import render_layer, probe_fonts
-from templates.scene import render_scene
+from templates.scene import render_scene, FITS
 
 # Between scenes. Much smaller than the opening pad: the background footage is
 # continuous across the cut, so a long gap here reads as the video stalling
 # rather than as a beat.
 SCENE_LEAD = 0.15
+
+
+def _utf8_console() -> None:
+    """Stop a Windows console from killing the run over an Urdu log line.
+
+    The default Windows code page is cp1252, which cannot encode Urdu — so
+    printing a topic, or guard.py naming the pattern it matched, raises
+    UnicodeEncodeError and takes down a run that was otherwise fine. CI is
+    UTF-8 already; this only matters locally, which is where the video is
+    actually looked at.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
 
 def plan(voices: list[dict]) -> tuple[list[float], list[float], list[float], float]:
@@ -87,7 +103,7 @@ def build(spec: dict, name: str) -> tuple[str, float]:
             zip(scenes, durations, leads, voices)):
         scene = dict(scene, words=voice["words"])
         html = render_scene(scene, dur, lead, i, len(scenes))
-        layer = render_layer(html, f"{name}_s{i}", dur)
+        layer = render_layer(html, f"{name}_s{i}", dur, fits=FITS)
         composed.append(assembler.compose_scene(
             layer, bg, bg_offset, dur, f"{name}_s{i}"))
         bg_offset += dur
@@ -125,6 +141,7 @@ def main() -> int:
                     help="publish to Facebook Reels and YouTube Shorts")
     ap.add_argument("--topic", help="script this topic instead of the queue's next")
     args = ap.parse_args()
+    _utf8_console()
 
     # Before anything is generated or paid for. A missing Urdu font does not
     # fail the run, it ships a video of empty boxes — success in every log line.

@@ -2,17 +2,26 @@
 voice_urdu.py
 Urdu narration, with word timings for the karaoke caption.
 
-Lifted from tiktok-reels-agent's voice_generator.py and cut down to one
-language. Two engines, and the fallback is the point: Gemini sounds markedly
-better but is a preview model on a small per-minute quota, and a day where it
-429s must still produce a video. Edge TTS is free, has no quota worth hitting,
-and — the reason it is the fallback rather than a second-class path — is the
-only one of the two that reports real word boundaries.
+Four engines, tried in a fixed order, and the order is the point:
 
-When Gemini narrates, the word timings are estimated from word length. That
-estimate starts at the first sound, not at t=0: Gemini reliably leaves a beat
-of silence before speaking, and measuring it is the difference between a
-caption that tracks the voice and one that runs ahead of it all scene.
+  1. Gemini 2.5 Flash TTS, voice Charon — the one that actually sounds Urdu.
+  2. Gemini 2.5 Flash Lite TTS (preview) — same family, separate quota. This
+     tier exists specifically so a spent daily allowance on tier 1 costs the
+     accent, not the video.
+  3. OpenAI TTS. Worth knowing what this is: OpenAI ships no Urdu-specific
+     voice. It will read Urdu text with an English-trained voice and the
+     accent is audibly wrong — this is the same finding that moved the Time
+     Lens project off OpenAI and onto Gemini. It sits here as a third
+     parachute, not as a peer of the tiers above it.
+  4. Edge TTS, free, `ur-PK-AsadNeural`. Never runs out, and it is the only
+     engine of the four that reports REAL word boundaries — every other tier's
+     karaoke timing is estimated from word length.
+
+Each tier gets two attempts and then hands over. A tier that returns a verdict
+of "this will not come good" — a spent daily quota, a bad key, a wrong model
+name — is switched off for the whole process rather than re-tried per scene:
+a video is eight narration calls, and without that the same doomed request runs
+sixteen times against the same dead quota before anyone sees a video.
 """
 import asyncio
 import base64
@@ -24,30 +33,34 @@ import edge_tts
 import requests
 
 from config import (
-    GEMINI_API_KEY, GEMINI_TTS_MODEL, GEMINI_TTS_VOICE, VOICE_ENGINE,
+    GEMINI_API_KEY, GEMINI_TTS_MODEL, GEMINI_TTS_LITE_MODEL, GEMINI_TTS_VOICE,
+    OPENAI_API_KEY, OPENAI_TTS_MODEL, OPENAI_TTS_VOICE,
     EDGE_TTS_UR_VOICE, EDGE_TTS_RATE, GEMINI_MIN_INTERVAL, GEMINI_MAX_BACKOFF,
-    TEMP_DIR,
+    TTS_ATTEMPTS, TEMP_DIR,
 )
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+OPENAI_URL = "https://api.openai.com/v1/audio/speech"
 
 STYLE = os.environ.get("GEMINI_TTS_STYLE", "").strip() or (
-    "Parho ek pur-sukoon, dostana Urdu raavi ki tarah — jaise kisi apne ko "
-    "mashwara de rahe ho. Aawaz saaf aur garam, na koi jaldi, na koi "
-    "eshtehari lehja, natural pauses ke saath."
+    "Yeh Urdu mein parho, saaf Urdu talaffuz ke saath. Lehja pur-sukoon aur "
+    "dostana ho — jaise kisi apne ko mashwara de rahe ho. Na koi jaldi, na "
+    "koi eshtehari andaaz, natural pauses ke saath."
 )
 
-# Set once when Gemini says the rest of the run is pointless. Without it every
-# remaining scene re-runs the same doomed request against the same spent quota.
-_gemini_off: str | None = None
-_last_call = 0.0
+# Keyed by engine label. Set once when that engine says the rest of the run is
+# pointless; the tiers below it carry on normally.
+_off: dict[str, str] = {}
+_last_gemini_call = 0.0
 
 
 def _quota_verdict(payload: dict) -> tuple[float, str | None]:
     """How long to wait, and whether waiting helps at all.
 
-    A per-minute quota clears on its own. A per-day quota does not clear inside
-    a run, so retrying it only spends tomorrow's allowance.
+    A per-minute quota clears on its own, so the server's retryDelay is
+    honoured. A per-day quota does not clear inside a run — retrying it only
+    spends tomorrow's allowance, so it retires that model and the next tier
+    takes over. This is exactly the case tier 2 exists for.
     """
     delay, fatal = 0.0, None
     for detail in (payload.get("error") or {}).get("details") or []:
@@ -60,14 +73,23 @@ def _quota_verdict(payload: dict) -> tuple[float, str | None]:
         elif kind.endswith("QuotaFailure"):
             for v in detail.get("violations") or []:
                 if "PerDay" in f"{v.get('quotaId', '')} {v.get('quotaMetric', '')}":
-                    fatal = f"daily quota exhausted ({v.get('quotaId') or 'PerDay'})"
+                    fatal = f"daily quota spent ({v.get('quotaId') or 'PerDay'})"
     return delay, fatal
 
 
-def _gemini(text: str, out_path: str) -> None:
-    global _gemini_off, _last_call
-    if _gemini_off:
-        raise RuntimeError(f"Gemini TTS off for this run: {_gemini_off}")
+def _pcm_to_mp3(pcm: bytes, rate: int, out_path: str) -> None:
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+         "-f", "s16le", "-ar", str(rate), "-ac", "1", "-i", "pipe:0",
+         "-b:a", "192k", out_path],
+        input=pcm, capture_output=True, check=True)
+
+
+def _gemini(text: str, out_path: str, model: str, label: str) -> None:
+    """One Gemini TTS model. Raises on failure; sets `_off[label]` when final."""
+    global _last_gemini_call
+    if label in _off:
+        raise RuntimeError(_off[label])
 
     body = {
         "contents": [{"parts": [{"text": f"{STYLE}: {text}"}]}],
@@ -78,19 +100,23 @@ def _gemini(text: str, out_path: str) -> None:
         },
     }
     last = None
-    for attempt in range(1, 3):
-        gap = GEMINI_MIN_INTERVAL - (time.monotonic() - _last_call)
+    for attempt in range(1, TTS_ATTEMPTS + 1):
+        # Both Gemini tiers share this pacing gap. A video is eight calls back
+        # to back, and preview TTS models have a small requests-per-minute
+        # allowance — firing them with no gap is what turns a working key into
+        # a wall of 429s.
+        gap = GEMINI_MIN_INTERVAL - (time.monotonic() - _last_gemini_call)
         if gap > 0:
             time.sleep(gap)
-        _last_call = time.monotonic()
+        _last_gemini_call = time.monotonic()
         try:
-            r = requests.post(GEMINI_URL.format(model=GEMINI_TTS_MODEL),
+            r = requests.post(GEMINI_URL.format(model=model),
                               headers={"x-goog-api-key": GEMINI_API_KEY,
                                        "Content-Type": "application/json"},
                               json=body, timeout=180)
         except Exception as e:
             last = e
-            if attempt < 2:
+            if attempt < TTS_ATTEMPTS:
                 time.sleep(5)
             continue
 
@@ -102,49 +128,89 @@ def _gemini(text: str, out_path: str) -> None:
             wait, fatal = _quota_verdict(payload)
             last = RuntimeError(f"HTTP 429: {r.text[:200]}")
             if fatal:
-                _gemini_off = fatal
+                _off[label] = f"{label}: {fatal}"
                 break
             wait = min(wait or 60.0, GEMINI_MAX_BACKOFF)
-            if attempt < 2:
-                print(f"  Gemini rate-limited — waiting {wait:.0f}s")
+            if attempt < TTS_ATTEMPTS:
+                print(f"  {label} rate-limited — waiting {wait:.0f}s")
                 time.sleep(wait)
                 continue
+            # Out of attempts on a per-minute limit. Do NOT retire the model —
+            # it will very likely work again on the next scene, a minute later.
             break
 
         # A bad key, a wrong model name or a rejected prompt will not come good
         # on a retry, and will not come good on the next scene either.
         if r.status_code in (400, 401, 403, 404):
-            _gemini_off = f"HTTP {r.status_code} for {GEMINI_TTS_MODEL}: {r.text[:200]}"
-            last = RuntimeError(_gemini_off)
+            _off[label] = (f"{label}: HTTP {r.status_code} for model "
+                           f"{model!r} — {r.text[:160]}")
+            last = RuntimeError(_off[label])
             break
         if r.status_code >= 400:
             last = RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
-            if attempt < 2:
+            if attempt < TTS_ATTEMPTS:
                 time.sleep(5)
             continue
 
         try:
             part = r.json()["candidates"][0]["content"]["parts"][0]["inlineData"]
-            pcm = base64.b64decode(part["data"])
             rate = 24000
             for bit in part.get("mimeType", "").split(";"):
                 if bit.strip().startswith("rate="):
                     rate = int(bit.strip()[5:])
-            subprocess.run(
-                ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-                 "-f", "s16le", "-ar", str(rate), "-ac", "1", "-i", "pipe:0",
-                 "-b:a", "192k", out_path],
-                input=pcm, capture_output=True, check=True)
+            _pcm_to_mp3(base64.b64decode(part["data"]), rate, out_path)
             return
         except Exception as e:
             last = e
-            if attempt < 2:
+            if attempt < TTS_ATTEMPTS:
                 time.sleep(5)
 
-    raise RuntimeError(f"Gemini TTS failed: {last}")
+    raise RuntimeError(f"{label} failed: {last}")
 
 
-async def _edge(text: str, out_path: str) -> list[tuple[str, float, float]]:
+def _openai(text: str, out_path: str) -> None:
+    label = "OpenAI"
+    if label in _off:
+        raise RuntimeError(_off[label])
+
+    last = None
+    for attempt in range(1, TTS_ATTEMPTS + 1):
+        try:
+            r = requests.post(
+                OPENAI_URL,
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}",
+                         "Content-Type": "application/json"},
+                json={"model": OPENAI_TTS_MODEL, "voice": OPENAI_TTS_VOICE,
+                      "input": text, "response_format": "mp3",
+                      # The instructions field is the only Urdu steer available
+                      # here — there is no Urdu voice to select.
+                      "instructions": "Read this Urdu text with clear Urdu "
+                                      "pronunciation, calm and unhurried."},
+                timeout=180)
+        except Exception as e:
+            last = e
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(5)
+            continue
+
+        if r.status_code in (400, 401, 403, 404):
+            _off[label] = f"{label}: HTTP {r.status_code} — {r.text[:160]}"
+            last = RuntimeError(_off[label])
+            break
+        if r.status_code >= 400:
+            last = RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+            if attempt < TTS_ATTEMPTS:
+                time.sleep(5)
+            continue
+
+        with open(out_path, "wb") as f:
+            f.write(r.content)
+        return
+
+    raise RuntimeError(f"{label} failed: {last}")
+
+
+async def _edge_stream(text: str, out_path: str) -> list[tuple[str, float, float]]:
     comm = edge_tts.Communicate(text, EDGE_TTS_UR_VOICE,
                                 rate=EDGE_TTS_RATE, boundary="WordBoundary")
     words = []
@@ -154,7 +220,8 @@ async def _edge(text: str, out_path: str) -> list[tuple[str, float, float]]:
                 f.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
                 start = chunk["offset"] / 1e7
-                words.append((chunk["text"], start, start + chunk["duration"] / 1e7))
+                words.append((chunk["text"], start,
+                              start + chunk["duration"] / 1e7))
     return words
 
 
@@ -188,39 +255,69 @@ def duration_of(path: str) -> float:
         capture_output=True, text=True, check=True).stdout.strip())
 
 
+def _tiers():
+    """The engine order, skipping anything that has no credentials."""
+    out = []
+    if GEMINI_API_KEY:
+        out.append(("Gemini Flash TTS",
+                    lambda t, o: _gemini(t, o, GEMINI_TTS_MODEL, "Gemini Flash TTS")))
+        if GEMINI_TTS_LITE_MODEL and GEMINI_TTS_LITE_MODEL != GEMINI_TTS_MODEL:
+            out.append(("Gemini Flash Lite TTS",
+                        lambda t, o: _gemini(t, o, GEMINI_TTS_LITE_MODEL,
+                                             "Gemini Flash Lite TTS")))
+    if OPENAI_API_KEY:
+        out.append(("OpenAI", _openai))
+    return out
+
+
 def narrate(text: str, scene_id: str) -> dict:
-    """Return {audio_path, duration, words} for one spoken line."""
+    """Return {audio_path, duration, words, engine} for one spoken line."""
     os.makedirs(TEMP_DIR, exist_ok=True)
     out_path = f"{TEMP_DIR}/{scene_id}_voice.mp3"
+    if os.path.exists(out_path):
+        os.remove(out_path)
     text = text.replace("\n", " ").strip()
-    words, last_err, engine = [], None, "Edge"
+    words, engine, last_err = [], None, None
 
-    if VOICE_ENGINE == "gemini" and GEMINI_API_KEY and not _gemini_off:
+    for label, call in _tiers():
+        if label in _off:
+            continue
         try:
-            _gemini(text, out_path)
-            engine = "Gemini"
+            call(text, out_path)
         except Exception as e:
             last_err = e
-            print(f"  Gemini failed for {scene_id} ({e}) — Edge fallback")
+            print(f"  {scene_id}: {label} unavailable ({str(e)[:140]})")
+            continue
+        if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+            engine = label
+            break
 
-    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-        for _ in range(2):
+    if not engine:
+        for _ in range(TTS_ATTEMPTS):
             try:
-                words = asyncio.run(_edge(text, out_path))
+                words = asyncio.run(_edge_stream(text, out_path))
+                engine = "Edge"
                 break
             except Exception as e:
                 last_err = e
 
-    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-        raise RuntimeError(f"No TTS engine produced audio for {scene_id}: {last_err}")
+    if not engine or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        raise RuntimeError(f"Every TTS engine failed for {scene_id}: {last_err}")
 
     duration = duration_of(out_path)
-    # Say which engine narrated, every time. In the sibling repo success was
-    # silent and only failure printed, so the only way to tell whether a video
-    # had the good voice was to notice the absence of an error.
+    # Named every time, not only on failure. In the sibling repo success was
+    # silent, so the only way to tell whether a video had the good voice or the
+    # free fallback was to notice the absence of an error — which is not
+    # something anyone should have to infer from a log.
     print(f"  {scene_id}: voice via {engine} ({duration:.1f}s)")
 
     if not words:
+        # Only Edge reports real word boundaries. Everything else returns audio
+        # and nothing else, so the highlight is estimated from word length —
+        # starting where the speech actually starts, because these engines
+        # reliably leave a beat of silence first and measuring it is the
+        # difference between a caption that tracks the voice and one that runs
+        # ahead of it for the whole scene.
         lead = min(_leading_silence(out_path), max(duration - 0.5, 0.0))
         speech = max(duration - lead, 0.1)
         raw = text.split()
@@ -232,8 +329,5 @@ def narrate(text: str, scene_id: str) -> dict:
             words.append((w, t, t + d))
             t += d
 
-    return {"audio_path": out_path, "duration": duration, "words": words}
-
-
-def available() -> bool:
-    return True  # Edge TTS needs no key; there is always a voice.
+    return {"audio_path": out_path, "duration": duration,
+            "words": words, "engine": engine}

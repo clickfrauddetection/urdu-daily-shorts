@@ -48,6 +48,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Overrides only. Left unset, config.py's defaults apply — these
+          # exist so a preview model id can be changed without a commit.
+          GEMINI_TTS_MODEL: ${{ secrets.GEMINI_TTS_MODEL }}
+          GEMINI_TTS_LITE_MODEL: ${{ vars.GEMINI_TTS_LITE_MODEL }}
+          # Tier 3 of the voice ladder; the run works without it.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}

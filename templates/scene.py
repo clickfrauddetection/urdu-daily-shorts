@@ -25,6 +25,41 @@ from config import (
 from icons import icon, ROLE_DEFAULT
 
 
+# Ported from the reels repo. Captions cap at two lines and the headline at
+# three: a third stacked line of Nastaliq stops reading as type and starts
+# covering the picture. renderer.render_layer measures and shrinks to fit.
+FITS = [(".h", 3, 54), (".cap-box", 2, 34)]
+
+MIN_WORD_DURATION = 0.12  # so a very short or mistimed word still flashes
+
+
+def script_of(text: str, face: str = "display") -> tuple[str, str]:
+    """Writing direction and font family, decided by the text's own script.
+
+    `face` picks which Urdu typeface: "display" is Nastaliq, for the headline
+    only — it is the shape a reader stops for, and it is genuinely hard to read
+    small and moving. "body" is Noto Sans Arabic, for the caption, which is
+    small, moving, and has to be legible at a glance or it is not a caption.
+
+    The reels repo learned this the expensive way: it hard-coded direction:rtl
+    for Urdu, then its content engine started returning Roman Urdu and every
+    line rendered with its words visually reversed — full stops leading the
+    line, unreadable — and that is what shipped. This repo has the same
+    exposure, and worse: data/topics.json is written in Roman Urdu, so a model
+    that echoes the topic instead of translating it produces exactly that
+    input. Latin text is laid out left-to-right in a font that actually has
+    Latin glyphs, so a wrong-script line degrades to off-brand instead of to
+    nonsense.
+    """
+    urdu = any("؀" <= ch <= "ۿ" or "ﭐ" <= ch <= "﷿"
+               or "ﹰ" <= ch <= "﻿" for ch in text)
+    if urdu:
+        if face == "display":
+            return "rtl", "'NastaliqUrdu', 'SansArabic', serif"
+        return "rtl", "'SansArabic', 'NastaliqUrdu', sans-serif"
+    return "ltr", "Arial, Helvetica, sans-serif"
+
+
 def _font_url(filename: str) -> str:
     path = os.path.abspath(os.path.join(FONT_DIR, filename))
     return "file:///" + path.replace(os.sep, "/")
@@ -41,7 +76,7 @@ def _words_html(words: list, lead: float) -> str:
     """
     out = []
     for w, start, end in words:
-        dur = max(end - start, 0.08)
+        dur = max(end - start, MIN_WORD_DURATION)
         out.append(
             f'<span class="w" style="animation-delay:{start + lead:.3f}s;'
             f'animation-duration:{dur:.3f}s">{w}</span>'
@@ -58,12 +93,24 @@ def render_scene(scene: dict, duration: float, lead: float,
     # can tell "here is the problem" from "here is what to do" without reading.
     tone = p["accent"] if scene["role"] in ("hook", "problem", "cause") else p["accent_2"]
 
+    # Decided per scene, from the text that actually arrived, not once for the
+    # repo. A script that ships one Roman Urdu headline among seven Urdu ones
+    # should get one left-to-right headline, not a reversed one.
+    h_dir, h_font = script_of(scene["headline"], "display")
+    cap_text = " ".join(w for w, _, _ in (scene.get("words") or []))
+    c_dir, c_font = script_of(cap_text, "body")
+
     return f"""<!doctype html>
 <meta charset="utf-8">
 <style>
-@font-face {{ font-family:'NastaliqUrdu'; font-weight:700;
+/* Both files are VARIABLE fonts with a wght axis. The weight has to be
+   declared as a RANGE, not as a single value: telling the browser "this file
+   is 700" makes it treat the file as one static weight and render the axis
+   default instead — which is 400, and looks like the wrong font rather than
+   like a bug. The range lets font-weight below actually select an instance. */
+@font-face {{ font-family:'NastaliqUrdu'; font-weight:400 700;
   src:url('{_font_url("NotoNastaliqUrdu-Bold.ttf")}') format('truetype'); }}
-@font-face {{ font-family:'SansArabic'; font-weight:600;
+@font-face {{ font-family:'SansArabic'; font-weight:100 900;
   src:url('{_font_url("NotoSansArabic-SemiBold.ttf")}') format('truetype'); }}
 
 * {{ margin:0; padding:0; box-sizing:border-box; }}
@@ -99,33 +146,45 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
 .ic path {{ stroke-dasharray:140; stroke-dashoffset:140;
   animation:draw 1.1s ease-out both paused; animation-delay:.18s; }}
 
-.h {{ font-family:'NastaliqUrdu', serif; font-weight:700;
+.h {{ font-family:{h_font}; font-weight:700; direction:{h_dir};
   font-size:{scene.get("headline_size", 92)}px;
   /* Nastaliq descenders run deep; below ~2.1 the tails of one line are cut by
      the next. This is the number that most often needs raising, never lowering. */
   line-height:2.15;
-  margin-top:34px; text-align:right;
+  margin-top:34px; text-align:{"right" if h_dir == "rtl" else "left"};
   text-shadow:0 4px 26px rgba(0,0,0,.75);
   opacity:0; animation:rise .7s cubic-bezier(.2,.8,.3,1) both paused;
   animation-delay:.28s; }}
 .h em {{ font-style:normal; color:{tone}; }}
 
 /* the spoken line, lower third, inside the safe box */
-.cap {{ font-family:'SansArabic', sans-serif; font-weight:600;
-  font-size:52px; line-height:1.85; text-align:center;
+.cap {{ text-align:center; }}
+/* A tinted pill behind the words, ported from the reels repo. The scrim alone
+   holds contrast on most clips; the pill holds it on all of them, including the
+   bright ones nobody looked at before the video published. */
+.cap-box {{ display:inline-block; padding:14px 26px; border-radius:18px;
+  background:rgba(8,14,24,.66);
+  font-family:{c_font}; font-weight:600; direction:{c_dir};
+  font-size:52px; line-height:1.85;
   text-shadow:0 3px 18px rgba(0,0,0,.85); }}
 /* `forwards`, not `both`, and this is the whole trick of the karaoke line: with
    `both` the word would hold the from-state before its delay, which is the same
    colour it ends on — every word lit from frame zero. With `forwards` an
    un-started word keeps its own muted colour, flares accent as it is said, and
    stays bright afterwards, so the line reads as a filling progress bar. */
-.cap .w {{ color:{p["muted"]};
+.cap-box .w {{ display:inline-block; color:{p["muted"]};
   animation:lit linear forwards paused; }}
 
+/* The flare is on the word's FIRST frame, held, then cooled — not ramped into.
+   Ramping over the first 30% put the highlight ~90ms behind the voice on a
+   typical word, which reads as a sync fault rather than as a style. The reels
+   repo shipped exactly that and fixed it the same way; the cool-down afterwards
+   can stay slow, because a trailing word settling is not something the ear
+   tracks. */
 @keyframes lit {{
-  0%   {{ color:{p["muted"]}; }}
-  30%  {{ color:{tone}; }}
-  100% {{ color:{p["ink"]}; }} }}
+  0%   {{ color:{tone}; text-shadow:0 0 26px {tone}66, 0 3px 18px rgba(0,0,0,.85); }}
+  70%  {{ color:{tone}; text-shadow:0 0 26px {tone}66, 0 3px 18px rgba(0,0,0,.85); }}
+  100% {{ color:{p["ink"]}; text-shadow:0 3px 18px rgba(0,0,0,.85); }} }}
 @keyframes pop  {{ from {{ opacity:0; transform:scale(.6) translateY(20px); }}
                    to   {{ opacity:1; transform:none; }} }}
 @keyframes draw {{ to {{ stroke-dashoffset:0; }} }}
@@ -142,6 +201,7 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
     {icon(name, 104)}
     <div class="h">{scene["headline"]}</div>
   </div>
-  <div class="cap">{_words_html(scene.get("words") or [], lead)}</div>
+  <div class="cap"><div class="cap-box">{
+      _words_html(scene.get("words") or [], lead)}</div></div>
 </div>
 """

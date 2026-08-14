@@ -50,8 +50,37 @@ _SEEK = """
 }
 """
 
+# Ported from tiktok-reels-agent's scene_renderer.py, which had the right idea:
+# an Urdu line's width cannot be guessed, because it depends on which letters
+# join to which. Picking a font size that fits the AVERAGE sentence means every
+# other sentence is either overflowing or swimming in space. The page measures
+# its own text instead and steps the size down one pixel at a time until it
+# fits — exact for every sentence rather than right for the mean one.
+_FIT = """
+([sel, maxLines, minPx]) => {
+  const el = document.querySelector(sel);
+  if (!el) return null;
+  // scrollHeight includes the element's own padding. Comparing it against
+  // lineHeight * maxLines counts that padding as if it were another line and
+  // shrinks text that already fits.
+  const lines = () => {
+    const cs = getComputedStyle(el);
+    const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    return Math.round((el.scrollHeight - pad) / parseFloat(cs.lineHeight));
+  };
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  let guard = 0;
+  while (lines() > maxLines && size > minPx && guard++ < 80) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
+  return {px: Math.round(size), lines: lines()};
+}
+"""
 
-def render_layer(html: str, name: str, duration: float) -> str:
+
+def render_layer(html: str, name: str, duration: float,
+                 fits: list[tuple[str, int, int]] | None = None) -> str:
     """Render `html` for `duration` seconds and return an alpha .mov path.
 
     The HTML must have a transparent html/body background and must author its
@@ -93,10 +122,26 @@ def render_layer(html: str, name: str, duration: float) -> str:
             page.evaluate("document.fonts.ready")
             page.wait_for_timeout(SETTLE_MS)
 
+            # After the fonts land, never before — the measurement is of the
+            # real typeface, and against a fallback face it is measuring the
+            # wrong glyph widths entirely.
+            for sel, max_lines, min_px in (fits or []):
+                got = page.evaluate(_FIT, [sel, max_lines, min_px])
+                if got and got["lines"] > max_lines:
+                    print(f"  {name}: {sel} still {got['lines']} lines at the "
+                          f"{min_px}px floor — the text is too long, not too big")
+
             for i in range(frames):
                 page.evaluate(_SEEK, (i / FPS) * 1000)
-                ff.stdin.write(page.screenshot(
-                    type="png", omit_background=True, animations="disabled"))
+                # NOT animations="disabled". That option does not freeze an
+                # animation where it is — it fast-forwards every animation to
+                # its final state before the shot. With it on, every frame came
+                # back fully animated: the icon drawn, the headline landed, and
+                # every caption word already lit, which reads as a static
+                # subtitle and is exactly the effect this module exists for.
+                # We have already paused and seeked; there is nothing to
+                # stabilise.
+                ff.stdin.write(page.screenshot(type="png", omit_background=True))
 
             ctx.close()
             browser.close()

@@ -60,9 +60,24 @@ DUCK_THRESHOLD = 0.02
 DUCK_RATIO = 3
 AUDIO_SAMPLE_RATE = 48000
 
-VOICE_ENGINE = (os.environ.get("VOICE_ENGINE") or "gemini").lower()
-GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL") or "gemini-3.1-flash-tts-preview"
+# The TTS ladder, in order. See voice_urdu.py for why this order and not
+# another. Every rung is overridable, because a preview model id changes
+# without notice and a retired id 404s rather than degrading — which has taken
+# the sibling repos down for days at a time.
+GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL") or "gemini-2.5-flash-preview-tts"
+GEMINI_TTS_LITE_MODEL = (os.environ.get("GEMINI_TTS_LITE_MODEL")
+                         or "gemini-2.5-flash-lite-preview-tts")
 GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Charon"
+
+# Tier 3. OpenAI ships no Urdu voice — this reads Urdu with an English-trained
+# voice and the accent is audibly wrong. It is a parachute, not a peer of the
+# Gemini tiers.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
+OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE") or "onyx"
+
+# Attempts per tier before handing to the next one.
+TTS_ATTEMPTS = int(os.environ.get("TTS_ATTEMPTS") or 2)
 EDGE_TTS_UR_VOICE = os.environ.get("EDGE_TTS_UR_VOICE") or "ur-PK-AsadNeural"
 EDGE_TTS_RATE = os.environ.get("EDGE_TTS_RATE") or "+8%"
 GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_TTS_MIN_INTERVAL") or 6)
