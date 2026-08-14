@@ -1,0 +1,129 @@
+# urdu-daily-shorts
+
+One Urdu vertical short a day — Facebook Reels and YouTube Shorts — built from
+an HTML text layer composited over stock footage. No image model, no video
+model. The only per-video cost is one Claude call for the script and the TTS.
+
+Sibling repos: `social-media-posts-agent` (English, LinkedIn, square diagrams),
+`tiktok-reels-agent` (Urdu, per-scene generated images). This one deliberately
+takes a different rendering path from both — see below.
+
+---
+
+## Why the renderer is not `record_video`
+
+Both sibling repos capture scenes with Playwright's `record_video`, which
+writes a variable-frame-rate webm against the wall clock. The file always comes
+back a little short, by an amount that depends on how fast the machine is.
+Every `tpad=stop_mode=clone`, every measured `lead` offset, every "the closing
+screen is three seconds adrift of the words describing it" fix in those repos is
+a patch on that one fact — and the patches stop holding on a slow CI runner.
+
+`renderer.py` never lets the browser's clock run. Animations are authored
+paused, and each frame is made by seeking every animation to an exact time and
+screenshotting:
+
+```js
+for (const a of document.getAnimations()) { a.pause(); a.currentTime = ms; }
+```
+
+A 7.00s scene is 210 frames at 30fps on any machine. The narration offsets
+`main.plan()` computes are therefore true by construction, and no padding is
+ever needed.
+
+Two more things fall out of it:
+
+- Frames are captured **with alpha** (`omit_background`) and piped straight
+  into ffmpeg as a lossless `qtrle` .mov. The background footage is composited
+  underneath **in ffmpeg**, never in the browser — a `<video>` element decoded
+  by Chromium cannot be seeked frame-accurately, which would put the drift
+  straight back.
+- Everything renders at 2x (`SCALE`) and ffmpeg downscales with lanczos. Urdu
+  is thin, high-contrast type; at 1x the strokes alias and H.264 turns the
+  shimmer into blocking.
+
+## Layout
+
+```
+content.py    topic queue -> Claude -> an 8-scene script (fixed roles)
+guard.py      refuses medical claims BEFORE anything is generated
+voice_urdu.py Gemini TTS, Edge TTS fallback, word timings for the karaoke line
+stock_bg.py   one Pixabay clip for the whole video, from a fixed theme list
+templates/    the scene's HTML: RTL, two Urdu faces, scrim, safe zones
+icons.py      inline SVG only — an unknown icon name raises, never falls back
+renderer.py   frame-accurate alpha capture
+assembler.py  composite, join, mux voice, duck a music bed
+main.py       one clock for the whole video, then the two posters
+```
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+playwright install --with-deps chromium
+python fetch_fonts.py     # then commit ./fonts — CI needs them too
+```
+
+`ffmpeg` and `ffprobe` must be on PATH.
+
+### Secrets
+
+Copy the **same values** from the sibling repos — same Meta app, same Page,
+same YouTube OAuth client. Nothing here needs a new app.
+
+| Secret | Needed for |
+|---|---|
+| `ANTHROPIC_API_KEY` | writing the script |
+| `GEMINI_API_KEY` | the good voice (falls back to free Edge TTS without it) |
+| `PIXABAY_API_KEY` | background footage (falls back to a flat gradient) |
+| `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN` | Facebook Reels |
+| `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` | Shorts |
+
+Repo **variable** `NICHE` picks the channel (`sleep`, `focus`, …). It selects
+the topic queue, the background themes and the hashtags — a second channel is a
+second value here, not a second repo.
+
+**Set the YouTube OAuth consent screen to "In production."** While it sits in
+"Testing", Google expires the refresh token every 7 days. That has taken the
+sibling repo down repeatedly.
+
+## Running
+
+```bash
+python main.py                        # dry run: writes out/<niche>_<date>.mp4
+python main.py --topic "..."          # skip the queue
+python main.py --post                 # publish to both platforms
+```
+
+Every build writes `out/<name>.json` — the exact script the file was made from.
+When a video performs, that is the only useful question.
+
+## Music
+
+`data/music/` is empty on purpose. `assembler.MUSIC_ATTRIBUTION` must carry a
+licence line for a file before that file will be used; anything without an
+entry is skipped with a warning, and the video ships without a bed. This posts
+publicly under the Page's name, and the sibling repo already carries four
+tracks that arrived in a merge with no attribution and no licence checked.
+
+## The guard
+
+`guard.py` runs before a frame is rendered and is fatal by default. It refuses:
+cure and treatment claims, any named condition or diagnosis, any medicine,
+supplement, dose or quantity, "you don't need a doctor", and guarantees. Every
+pattern is matched against Urdu script, Roman Urdu and English, because the
+writer produces all three.
+
+The point is not view count. A run of unread auto-generated advice needs one
+clip claiming a cure to take a strike that costs the Page. Losing a day's post
+is cheap by comparison.
+
+Both disclaimers ride on every caption and description.
+
+## Adding topics
+
+`data/topics.json`, keyed by niche, drained in order and matched against
+`data/posted_log.json`. Filled by hand, never by the model: a model asked daily
+to "think of a good topic" converges within about two weeks and starts
+rewording the same four ideas. The queue running low prints a warning; running
+out is a hard error rather than a quiet decline in quality.

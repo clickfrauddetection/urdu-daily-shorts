@@ -1,0 +1,75 @@
+name: Daily Urdu Short
+
+on:
+  schedule:
+    # 03:30 UTC = 08:30 PKT. Posting lands before the morning commute rather
+    # than during the night, which is when this audience is actually scrolling.
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Override the queue and script this topic"
+        required: false
+      dry_run:
+        description: "Build only, publish nothing"
+        type: boolean
+        default: false
+
+jobs:
+  build-and-post:
+    runs-on: ubuntu-latest
+    # A 60s video is ~8 scene renders plus TTS; 25 minutes is generous. Left
+    # unset, a hung Playwright call burns six hours of the account's minutes.
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Build the video
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          NICHE: ${{ vars.NICHE || 'sleep' }}
+        run: |
+          python main.py \
+            ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \
+            ${{ github.event.inputs.dry_run == 'true' && ' ' || '--post' }}
+
+      # Kept whatever happened. When a video reads badly the file and the script
+      # that produced it are the only two things worth looking at, and by the
+      # time anyone looks the runner is long gone.
+      - name: Keep the build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_number }}
+          path: out/
+          retention-days: 14
+
+      - name: Commit the posted log
+        if: success() && github.event.inputs.dry_run != 'true'
+        run: |
+          git config user.name "urdu-shorts-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/posted_log.json
+          git diff --staged --quiet || git commit -m "chore: posted log [skip ci]"
+          git push

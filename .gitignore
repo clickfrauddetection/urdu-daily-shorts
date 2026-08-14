@@ -1,0 +1,6 @@
+temp/
+out/
+__pycache__/
+*.pyc
+.env
+youtube_refresh_token.txt
