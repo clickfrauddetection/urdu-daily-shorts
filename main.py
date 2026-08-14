@@ -25,7 +25,8 @@ import replicate_bg
 import stock_bg
 import voice_urdu
 from config import (
-    NICHE, HOOK_LEAD, SCENE_PAD, MAX_DURATION, TEMP_DIR, OUT_DIR, LOG_FILE,
+    NICHE, HOOK_LEAD, SCENE_PAD, MAX_DURATION, HARD_MAX_DURATION,
+    TEMP_DIR, OUT_DIR, LOG_FILE,
 )
 from renderer import render_layer, probe_fonts
 from templates.scene import render_scene, FITS
@@ -85,11 +86,11 @@ def plan(voices: list[dict]) -> tuple[list[float], list[float], list[float], flo
         leads = [x * keep for x in leads]
         pads = [x * keep for x in pads]
         print(f"  script runs {over:.1f}s long — pads squeezed to {keep * 100:.0f}%")
-    if speech > MAX_DURATION:
+    if speech > HARD_MAX_DURATION:
         raise ValueError(
-            f"The narration alone is {speech:.1f}s, over the {MAX_DURATION:.0f}s "
-            f"ceiling. Shorten the script — do not raise the ceiling; a Short "
-            f"that runs past 60s loses its Shorts placement.")
+            f"The narration alone is {speech:.1f}s, past the "
+            f"{HARD_MAX_DURATION:.0f}s point where this stops being a short. "
+            f"The re-ask did not shorten it — check the script in out/.")
 
     durations, starts, clock = [], [], 0.0
     for lead, pad, v in zip(leads, pads, voices):
@@ -100,12 +101,38 @@ def plan(voices: list[dict]) -> tuple[list[float], list[float], list[float], flo
     return leads, durations, starts, clock
 
 
+def _narrate_all(scenes: list[dict], name: str, tag: str = "") -> list[dict]:
+    return [voice_urdu.narrate(s["spoken"], f"{name}{tag}_s{i}")
+            for i, s in enumerate(scenes)]
+
+
 def build(spec: dict, name: str, pillar: str) -> tuple[str, float]:
     scenes = spec["scenes"]
 
     step(f"Narrating {len(scenes)} lines")
-    voices = [voice_urdu.narrate(s["spoken"], f"{name}_s{i}")
-              for i, s in enumerate(scenes)]
+    voices = _narrate_all(scenes, name)
+
+    # The word budget in the prompt is an estimate; the clock is the truth, and
+    # only the narrator knows it. Rather than failing — which is what run #2
+    # did, after paying for a script and eight TTS calls — measure the overrun
+    # and ask for a script that fits, with the real number in hand. One retry:
+    # a second is more likely to be the model being stubborn than to help.
+    speech = sum(v["duration"] for v in voices)
+    if speech > MAX_DURATION:
+        words = sum(len(s["spoken"].split()) for s in scenes)
+        target = max(int(words * (MAX_DURATION - 5) / speech), 60)
+        step(f"Narration is {speech:.1f}s, over {MAX_DURATION:.0f}s — "
+             f"re-asking for {target} words instead of {words}")
+        try:
+            spec["scenes"] = scenes = content.write_script(
+                spec["topic"], pillar, max_words=target)["scenes"]
+            guard.check(spec)
+            voices = _narrate_all(scenes, name, "_r")
+            step(f"Re-ask narrates in {sum(v['duration'] for v in voices):.1f}s")
+        except Exception as e:
+            # A failed re-ask is not worth the day's video either. Ship the
+            # long one; plan() still refuses only what is past publishable.
+            step(f"Re-ask failed ({e}) — building the long cut")
 
     leads, durations, starts, total = plan(voices)
     step(f"Planned {total:.1f}s over {len(scenes)} scenes")

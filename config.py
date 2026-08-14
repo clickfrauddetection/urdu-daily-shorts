@@ -71,7 +71,13 @@ SAFE_LEFT = 70
 HOOK_LEAD = 0.6          # frame lands before the first word
 SCENE_PAD = 0.35         # breath after a scene's last word
 XFADE = 0.25             # crossfade between scenes
-MAX_DURATION = 59.0      # Shorts eligibility; also the attention ceiling
+MAX_DURATION = 59.0      # the target: Shorts placement, and the attention ceiling
+# The point past which the video is genuinely not publishable. Between
+# MAX_DURATION and this, the script is re-asked once and then shipped long —
+# losing the day's video over four seconds is a worse trade than posting a
+# 64-second Short. FB Reels allows 90s and YouTube Shorts now allows well past
+# a minute, so overrunning costs placement, not the post.
+HARD_MAX_DURATION = float(os.environ.get("HARD_MAX_DURATION") or 80.0)
 
 # ---------------------------------------------------------------------- audio
 VOICE_TARGET_LUFS = -16
@@ -84,9 +90,14 @@ AUDIO_SAMPLE_RATE = 48000
 # another. Every rung is overridable, because a preview model id changes
 # without notice and a retired id 404s rather than degrading — which has taken
 # the sibling repos down for days at a time.
-GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL") or "gemini-2.5-flash-preview-tts"
+# These two ids are the ones tiktok-reels-agent actually narrates with — taken
+# from a repo that demonstrably works rather than guessed. The first default
+# here was "gemini-2.5-flash-preview-tts", which 404s: a wrong or retired id
+# does not degrade, it fails outright, so Gemini switched off on the first call
+# of run #2 and the whole video was narrated by the free Edge fallback.
+GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL") or "gemini-3.1-flash-tts-preview"
 GEMINI_TTS_LITE_MODEL = (os.environ.get("GEMINI_TTS_LITE_MODEL")
-                         or "gemini-2.5-flash-lite-preview-tts")
+                         or "gemini-3.1-flash-lite-tts-preview")
 GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Charon"
 
 # Tier 3. OpenAI ships no Urdu voice — this reads Urdu with an English-trained

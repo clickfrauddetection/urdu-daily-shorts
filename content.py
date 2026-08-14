@@ -61,9 +61,10 @@ Rules:
 - "action" is the single smallest thing to try tonight.
 - "follow" asks for a follow, and names the channel's subject so the ask has a
   reason. It offers nothing to buy.
-- Total spoken words across all eight scenes: 110 to 150. This is a hard
-  budget — the whole video must fit in {max_secs:.0f} seconds and it will be
-  cut if it does not.
+- Total spoken words across all eight scenes: 95 to 120. This is a hard budget.
+  Spoken Urdu runs at roughly two words a second, so 150 words is over a
+  minute before a single pause is counted — which is how the first live run
+  overran and had to be re-asked.
 
 Also produce:
 - "title": Urdu, under 70 characters, for the YouTube Short.
@@ -140,7 +141,7 @@ def next_topic() -> tuple[str, str]:
         f"to {TOPICS_FILE} — do not let the model invent them.")
 
 
-def write_script(topic: str, pillar: str = "") -> dict:
+def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> dict:
     """Ask Claude for the day's script and validate its shape before returning.
 
     Validated here rather than at render time because a malformed script that
@@ -156,7 +157,14 @@ def write_script(topic: str, pillar: str = "") -> dict:
         system=SYSTEM,
         messages=[{"role": "user", "content": TEMPLATE.format(
             topic=topic, niche=pillar or NICHE, icons=", ".join(known_icons()),
-            max_secs=MAX_DURATION)}],
+            max_secs=MAX_DURATION) + (
+            # Appended only on the re-ask, and it carries a real measurement
+            # rather than "make it shorter" — the first attempt already had a
+            # word budget and overshot it.
+            f"\n\nIMPORTANT: your previous attempt was too long when read "
+            f"aloud. Total spoken words across all eight scenes must be at "
+            f"most {max_words}. Cut detail, not scenes — all eight roles must "
+            f"still be there." if max_words else "")}],
     )
     raw = "".join(b.text for b in msg.content if b.type == "text").strip()
     if raw.startswith("```"):
