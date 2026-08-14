@@ -156,11 +156,14 @@ CLOUD_TTS_VOICES = [
 # Slightly under 1.0 is the whole "sakoon" register in one number.
 CLOUD_TTS_RATE = float(os.environ.get("CLOUD_TTS_RATE") or 0.94)
 CLOUD_TTS_PITCH = float(os.environ.get("CLOUD_TTS_PITCH") or 0.0)
-# Calm and settled, matching the channel's name. Chosen over a bright, quick
-# read: these topics are watched late at night, and someone who came for
-# sakoon and got a hype voice is gone in the first second. Algenib is soft and
-# clear; Charon is deeper if a heavier read is wanted.
-GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Algenib"
+# Charon — Naseem's pick, chosen by ear. Deep and settled, which matches both
+# the channel's name and when these videos get watched.
+#
+# Fixed, and meant to stay fixed. A channel's voice is its identity: a viewer
+# recognises the account by it within a few posts, and one that sounds like a
+# different person every day never builds that. try_voices.py exists to make
+# this choice once, not to make it repeatable.
+GEMINI_TTS_VOICE = os.environ.get("GEMINI_TTS_VOICE") or "Charon"
 
 # Tier 3. OpenAI ships no Urdu voice — this reads Urdu with an English-trained
 # voice and the accent is audibly wrong. It is a parachute, not a peer of the
