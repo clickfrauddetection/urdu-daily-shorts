@@ -92,11 +92,27 @@ jobs:
           path: out/
           retention-days: 14
 
+      # Runs even when a platform failed. The log is what stops tomorrow
+      # re-picking today's topic, and it is written the moment the video is
+      # built — losing it because a Page was not set up yet means the rotation
+      # never starts.
       - name: Commit the posted log
-        if: success() && github.event.inputs.dry_run != 'true'
+        if: always() && github.event.inputs.dry_run != 'true'
         run: |
+          test -f data/posted_log.json || exit 0
           git config user.name "urdu-shorts-bot"
           git config user.email "bot@users.noreply.github.com"
           git add data/posted_log.json
-          git diff --staged --quiet || git commit -m "chore: posted log [skip ci]"
-          git push
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: posted log [skip ci]"
+          # A build takes ~15 minutes, which is plenty of time for a commit to
+          # land on main from somewhere else — and then this push is rejected
+          # and the log never arrives, so the next run repeats today's topic.
+          # Rebase and retry rather than failing the job over a race.
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "push race (attempt $i) — retrying"
+            sleep 5
+          done
+          echo "could not push the posted log after 3 attempts"
+          exit 1

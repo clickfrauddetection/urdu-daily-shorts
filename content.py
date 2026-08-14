@@ -118,7 +118,12 @@ def next_topic() -> tuple[str, str]:
     if not queue:
         raise RuntimeError(f"{TOPICS_FILE} has no topics for niche {NICHE!r}")
 
-    entries = _posted()
+    # A topic counts as used only when the video actually reached a platform.
+    # The log records every build, but a build that published nowhere — because
+    # no Page is set up yet, or every poster failed — is a rehearsal, and
+    # burning a topic for it means a week of setup quietly costs seven topics
+    # and produces nothing. Rehearsals repeat today's topic until it lands.
+    entries = [e for e in _posted() if e.get("results")]
     done = {e.get("topic", "") for e in entries}
 
     if isinstance(queue, list):
