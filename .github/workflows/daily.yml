@@ -2,9 +2,20 @@ name: Daily Urdu Short
 
 on:
   schedule:
-    # 03:30 UTC = 08:30 PKT. Posting lands before the morning commute rather
-    # than during the night, which is when this audience is actually scrolling.
-    - cron: "30 3 * * *"
+    # TWO videos a day, at fixed slots, in Pakistan time (UTC+5):
+    #
+    #   01:00 UTC = 06:00 PKT   the ayah or the hadith
+    #   13:00 UTC = 18:00 PKT   Sakoon Zindagi
+    #
+    # Which one runs is decided by the CLOCK, not by the alternation — see the
+    # "Pick today's kind" step. A channel that posts the same kind of thing at
+    # the same time every day is one a viewer can form a habit around, and the
+    # two audiences are awake at different hours anyway.
+    #
+    # GitHub's scheduler is best-effort and routinely runs a cron ten to thirty
+    # minutes late under load. Fine for both slots; not worth correcting.
+    - cron: "0 1 * * *"
+    - cron: "0 13 * * *"
   workflow_dispatch:
     inputs:
       topic:
@@ -58,6 +69,22 @@ jobs:
       - name: Ensure the ambient bed exists
         run: python make_ambience.py
 
+      # The morning slot is scripture, the evening slot is the habit video.
+      # Read off the cron that actually fired, so two schedules do not need two
+      # copies of this whole job. A manual run uses whatever `kind` was chosen
+      # in the dialog; choosing nothing falls through to config.CONTENT_KIND,
+      # which alternates.
+      - name: Pick today's kind
+        id: kind
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 1 * * *")  KIND=scripture ;;
+            "0 13 * * *") KIND=habit ;;
+            *)            KIND="${{ github.event.inputs.kind }}" ;;
+          esac
+          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
+          echo "This run builds: ${KIND:-（alternating）}"
+
       - name: Build the video
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -97,7 +124,7 @@ jobs:
         run: |
           python -u main.py \
             ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \
-            ${{ github.event.inputs.kind && format('--kind {0}', github.event.inputs.kind) || '' }} \
+            ${{ steps.kind.outputs.kind && format('--kind {0}', steps.kind.outputs.kind) || '' }} \
             ${{ github.event.inputs.dry_run == 'true' && ' ' || '--post' }}
 
       # Kept whatever happened. When a video reads badly the file and the script
