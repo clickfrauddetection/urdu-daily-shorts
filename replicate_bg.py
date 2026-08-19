@@ -65,6 +65,15 @@ PILLAR_PROMPT = {
                 "amber tones"),
     "sleep": ("a calm dark night scene, moonlight through a window onto an "
               "empty quiet room, deep blue tones"),
+    # No mosque interiors, no calligraphy, no Arabic text of any kind in a
+    # GENERATED image: an image model asked for Arabic script produces
+    # letter-shaped noise, and letter-shaped noise behind an ayah is the worst
+    # thing this channel could put on screen. Landscape and light only, and the
+    # same green mountain country the Pixabay themes look for.
+    "quran": ("a wide green alpine meadow below snow-capped peaks, soft morning "
+              "light, drifting cloud, no people, no buildings, no text"),
+    "hadith": ("a clear mountain stream through green pines, soft light through "
+               "the canopy, mist, no people, no buildings, no text"),
     "default": ("a calm dark atmospheric landscape at night, deep blue tones, "
                 "soft moonlight"),
 }

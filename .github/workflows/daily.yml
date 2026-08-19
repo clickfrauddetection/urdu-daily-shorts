@@ -8,8 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       topic:
-        description: "Override the queue and script this topic"
+        description: 'Override the queue — a topic, or "quran 94:5" / "hadith 5907"'
         required: false
+      kind:
+        description: "Force today's kind instead of alternating"
+        type: choice
+        options: ["", "habit", "scripture"]
+        default: ""
       dry_run:
         description: "Build only, publish nothing"
         type: boolean
@@ -47,6 +52,12 @@ jobs:
           pip install -r requirements.txt
           playwright install --with-deps chromium
 
+      # Generated rather than trusted as a committed binary. A no-op when the
+      # files are already in the repo. A scripture day uses this instead of a
+      # music bed, and pick_music refuses to substitute music for it.
+      - name: Ensure the ambient bed exists
+        run: python make_ambience.py
+
       - name: Build the video
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -70,6 +81,13 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           NICHE: ${{ vars.NICHE || 'daily' }}
+          # "mixed" alternates habit and scripture day by day, counting posts
+          # rather than dates. "habit" or "scripture" pins the channel to one.
+          CONTENT_KIND: ${{ vars.CONTENT_KIND || 'mixed' }}
+          # Editorial, changeable without a commit: which Urdu translation of
+          # the Qur'an, and which reciter.
+          QURAN_UR_EDITION: ${{ vars.QURAN_UR_EDITION }}
+          QURAN_RECITER: ${{ vars.QURAN_RECITER }}
           RENDER_SCALE: ${{ vars.RENDER_SCALE }}
           # Without this, CI sees a pipe rather than a terminal, Python buffers
           # stdout, and the whole log arrives at once when the process exits —
@@ -79,6 +97,7 @@ jobs:
         run: |
           python -u main.py \
             ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \
+            ${{ github.event.inputs.kind && format('--kind {0}', github.event.inputs.kind) || '' }} \
             ${{ github.event.inputs.dry_run == 'true' && ' ' || '--post' }}
 
       # Kept whatever happened. When a video reads badly the file and the script

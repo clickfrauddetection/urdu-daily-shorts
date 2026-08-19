@@ -1,0 +1,199 @@
+"""
+build_queue.py
+Fills data/islamic_queue.json with entries that will actually fit a Short.
+
+    python build_queue.py            # top the queue up
+    python build_queue.py --show     # print what is in it and what has run
+
+The queue is the input to the scripture channel exactly as data/topics.json is
+the input to the wellness one, and for the same reason: a model asked every
+morning to pick a verse converges, and on this channel it would converge on
+whatever it has seen most, which is not a defensible way to choose what
+scripture reaches people. So the queue is chosen once and drained one entry a
+day. This script does the choosing MECHANICALLY — it does not ask a model
+anything — and it filters on the two things that decide whether an entry can
+be a sixty-second video at all:
+
+  length   A verse whose Urdu translation runs past ~30 words leaves no room
+           for the recitation, the explanation and the follow — 30 words is
+           about fifteen seconds of spoken Urdu, and the recitation and the
+           written parts need the other forty-five. A hadith past ~45 words is
+           a page. Both caps were set by measuring, not guessed: at 24 words
+           the filter threw out most of the verses worth posting.
+  grade    Only what islamic_sources.SOUND_GRADES accepts. HadeethEnc supplies
+           the grade; nothing here judges one.
+
+Hadiths are drawn from HadeethEnc category 5, فضائل و آداب — virtues and
+manners. Deliberately not category 4 (فقہ), which is rulings, and not the
+sub-categories about sects: a daily automated channel has no business in
+either, and the writer is told the same thing in content_islamic.SYSTEM.
+
+Verses are the list below, written by hand and kept short. Add to it. The
+script checks every one against the API before it writes anything, so a typo
+in a reference fails here rather than at six in the morning.
+"""
+import argparse
+import json
+import os
+import sys
+
+import islamic_sources as sources
+from config import ISLAMIC_QUEUE_FILE, LOG_FILE
+
+MAX_AYAH_WORDS = 30
+MAX_HADITH_WORDS = 45
+
+HADEETH_CATEGORY = "5"          # فضائل و آداب
+HADEETH_PAGES = 6
+PER_PAGE = 25
+
+# Short, and about how a person lives — not about rulings, not about disputes.
+AYAT = [
+    "94:5", "94:6", "94:7", "94:8",       # with hardship comes ease
+    "2:152", "2:153", "2:186", "2:286",   # remembrance, patience, nearness
+    "3:139", "3:159", "3:200",
+    "13:11", "13:28",                     # hearts find rest
+    "14:7",                               # gratitude
+    "16:90", "16:97", "16:128",
+    "17:23", "17:24", "17:53",            # parents, good speech
+    "20:124",
+    "24:22",                              # forgive and overlook
+    "29:69",
+    "31:17", "31:18", "31:19",            # Luqman's counsel
+    "39:53",                              # do not despair
+    "41:34",                              # repel evil with what is better
+    "42:43",
+    "47:7",
+    "49:11", "49:12", "49:13",            # names, suspicion, backbiting
+    "50:16",
+    "53:39",
+    "55:60",
+    "57:20",
+    "64:11",
+    "65:2", "65:3",
+    "76:8",
+    "87:14", "87:16", "87:17",
+    "92:5", "92:6", "92:7",
+    "93:5", "93:7", "93:9", "93:10", "93:11",
+    "103:2", "103:3",
+]
+
+
+def _load() -> dict:
+    if os.path.exists(ISLAMIC_QUEUE_FILE):
+        with open(ISLAMIC_QUEUE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def _posted_keys() -> set[str]:
+    if not os.path.exists(LOG_FILE):
+        return set()
+    with open(LOG_FILE, encoding="utf-8") as f:
+        try:
+            entries = json.load(f)
+        except json.JSONDecodeError:
+            return set()
+    return {e.get("topic", "") for e in entries if e.get("results")}
+
+
+def show() -> int:
+    queue = _load()
+    done = _posted_keys()
+    for pillar, entries in queue.items():
+        if pillar.startswith("_"):
+            continue
+        left = [e for e in entries
+                if f"{'quran' if e.get('quran') else 'hadith'} "
+                   f"{e.get('quran') or e.get('hadith')}" not in done]
+        print(f"  {pillar}: {len(left)} left of {len(entries)}")
+    return 0
+
+
+def gather_quran() -> list[dict]:
+    kept = []
+    for ref in AYAT:
+        try:
+            item = sources.ayah(ref)
+        except Exception as e:                       # noqa: BLE001
+            print(f"  {ref}: skipped — {str(e)[:90]}")
+            continue
+        words = len(item["urdu"].split())
+        if words > MAX_AYAH_WORDS:
+            print(f"  {ref}: skipped — translation is {words} words, too long "
+                  f"for a Short")
+            continue
+        kept.append({"quran": ref, "_ur": item["urdu"][:60]})
+    return kept
+
+
+def gather_hadith() -> list[dict]:
+    kept = []
+    for page in range(1, HADEETH_PAGES + 1):
+        try:
+            ids = sources.hadith_ids(HADEETH_CATEGORY, PER_PAGE, page)
+        except Exception as e:                       # noqa: BLE001
+            print(f"  category {HADEETH_CATEGORY} page {page}: {str(e)[:90]}")
+            break
+        if not ids:
+            break
+        for hid in ids:
+            try:
+                item = sources.hadith(hid)
+            except Exception:                        # noqa: BLE001
+                # Almost always the grade check refusing it. Silent: this loop
+                # looks at hundreds and the refusals are the normal case.
+                continue
+            words = len(item["urdu"].split())
+            if not (6 <= words <= MAX_HADITH_WORDS):
+                continue
+            if not item["explanation"]:
+                # The writer is required to stay inside the published
+                # explanation. With no explanation there is nothing to stay
+                # inside, and the model would be left to interpret a hadith on
+                # its own — which is the thing this whole design avoids.
+                continue
+            kept.append({"hadith": hid, "_ur": item["urdu"][:60]})
+    return kept
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--show", action="store_true",
+                    help="print what is in the queue and stop")
+    args = ap.parse_args()
+    if args.show:
+        return show()
+
+    queue = _load()
+    have_q = {e["quran"] for e in queue.get("quran", []) if e.get("quran")}
+    have_h = {e["hadith"] for e in queue.get("hadith", []) if e.get("hadith")}
+
+    print("Checking the verses against alquran.cloud")
+    quran = [e for e in gather_quran() if e["quran"] not in have_q]
+    print(f"  {len(quran)} new")
+
+    print("Reading HadeethEnc — this walks a few hundred entries")
+    hadith = [e for e in gather_hadith() if e["hadith"] not in have_h]
+    print(f"  {len(hadith)} new")
+
+    queue.setdefault("_comment", (
+        "The scripture channel's input queue. Two pillars, alternating day by "
+        "day. An entry is {\"quran\": \"surah:ayah\"} or {\"hadith\": \"<id>\"} "
+        "— the id is HadeethEnc's. `_ur` is only there so this file can be "
+        "read by eye; nothing uses it. Top it up with build_queue.py, which "
+        "refuses anything too long for a Short or graded below hasan."))
+    queue.setdefault("quran", []).extend(quran)
+    queue.setdefault("hadith", []).extend(hadith)
+
+    os.makedirs(os.path.dirname(ISLAMIC_QUEUE_FILE), exist_ok=True)
+    with open(ISLAMIC_QUEUE_FILE, "w", encoding="utf-8") as f:
+        json.dump(queue, f, ensure_ascii=False, indent=2)
+    print(f"{ISLAMIC_QUEUE_FILE}: {len(queue['quran'])} verses, "
+          f"{len(queue['hadith'])} hadiths — "
+          f"{len(queue['quran']) + len(queue['hadith'])} days")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

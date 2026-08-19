@@ -394,6 +394,32 @@ def _tiers():
     return out
 
 
+def estimate_words(text: str, audio_path: str,
+                   duration: float) -> list[tuple[str, float, float]]:
+    """Word timings guessed from word length, for audio that reports none.
+
+    Only Edge reports real word boundaries. Every other engine — and every
+    downloaded recitation — returns audio and nothing else, so the highlight is
+    estimated: each word gets a share of the speech proportional to its length,
+    starting where the speech actually starts. Measuring that leading silence
+    matters more than the weighting does; these files reliably open with a beat
+    of nothing, and skipping it puts the caption ahead of the voice for the
+    whole scene.
+    """
+    words = []
+    lead = min(_leading_silence(audio_path), max(duration - 0.5, 0.0))
+    speech = max(duration - lead, 0.1)
+    raw = text.split()
+    weights = [max(len(w), 2) for w in raw]
+    total = sum(weights) or 1
+    t = lead
+    for w, wt in zip(raw, weights):
+        d = speech * wt / total
+        words.append((w, t, t + d))
+        t += d
+    return words
+
+
 def narrate(text: str, scene_id: str) -> dict:
     """Return {audio_path, duration, words, engine} for one spoken line."""
     os.makedirs(TEMP_DIR, exist_ok=True)
@@ -436,22 +462,7 @@ def narrate(text: str, scene_id: str) -> dict:
     print(f"  {scene_id}: voice via {engine} ({duration:.1f}s)")
 
     if not words:
-        # Only Edge reports real word boundaries. Everything else returns audio
-        # and nothing else, so the highlight is estimated from word length —
-        # starting where the speech actually starts, because these engines
-        # reliably leave a beat of silence first and measuring it is the
-        # difference between a caption that tracks the voice and one that runs
-        # ahead of it for the whole scene.
-        lead = min(_leading_silence(out_path), max(duration - 0.5, 0.0))
-        speech = max(duration - lead, 0.1)
-        raw = text.split()
-        weights = [max(len(w), 2) for w in raw]
-        total = sum(weights) or 1
-        t = lead
-        for w, wt in zip(raw, weights):
-            d = speech * wt / total
-            words.append((w, t, t + d))
-            t += d
+        words = estimate_words(text, out_path, duration)
 
     return {"audio_path": out_path, "duration": duration,
             "words": words, "engine": engine}

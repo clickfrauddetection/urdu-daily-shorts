@@ -47,6 +47,21 @@ THEMES = {
               "mountain trail sunrise", "ocean waves slow"],
     "rishtay": ["sunset field warm", "tea cup steam", "park bench evening",
                 "warm light window"],
+    # The scripture days. Naseem's call, and it is the right one for an Urdu
+    # audience: green mountain country — Fairy Meadows, streams, alpine
+    # valleys — rather than the desert-and-starfield look every Islamic page on
+    # the internet already uses. It is also the scenery this audience lives
+    # under, which is worth more than a stock idea of the Middle East.
+    #
+    # Nothing figurative and nobody in frame: a stock clip of a stranger
+    # praying under an ayah attaches a face to revelation, and it is the exact
+    # look that reads as content-farm output.
+    "quran": ["green meadow mountains", "mountain stream forest",
+              "alpine valley green", "pine forest mist", "waterfall forest",
+              "snow peaks clouds"],
+    "hadith": ["river valley mountains", "grass meadow wind",
+               "forest light rays", "mountain lake calm",
+               "green hills clouds", "stream rocks water"],
     # Kept for the older flat niches.
     "sleep": ["night sky stars", "moon clouds night", "calm bedroom window",
               "rain on window night", "candle flame dark"],

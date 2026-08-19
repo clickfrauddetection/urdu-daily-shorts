@@ -47,6 +47,22 @@ _P = {
               "a2 2 0 0 1-2-2V5M17 13h.01",
     "chart": "M3 3v18h18M7 15l4-5 3 3 5-7",
     "clock": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+    # deen — for the scripture profile. Outlines only, and nothing figurative
+    # beyond a building: the channel puts an ayah on screen, so the artwork
+    # around it stays furniture and never becomes the subject.
+    "book_open": "M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4"
+                 "a4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3"
+                 "a3 3 0 0 0-3-3z",
+    "mosque": "M12 3c-2.2 1.6-3.5 3.4-3.5 5h7c0-1.6-1.3-3.4-3.5-5zM6 21V11"
+              "a6 6 0 0 1 12 0v10M3 21V9M21 21V9M2 21h20"
+              "M10 21v-4a2 2 0 0 1 4 0v4",
+    "lamp": "M8 2h8l4 10H4L8 2zM12 12v6M8 22h8a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2z",
+    "quote": "M10 11H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"
+             "a4 4 0 0 1-4 4M20 11h-5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"
+             "a1 1 0 0 1 1 1v7a4 4 0 0 1-4 4",
+    "hands": "M7 21c-1.5-3-2-5-2-8V8a1.5 1.5 0 0 1 3 0M17 21c1.5-3 2-5 2-8V8"
+             "a1.5 1.5 0 0 0-3 0M8 13V5.5a1.5 1.5 0 0 1 3 0V12"
+             "M13 12V5.5a1.5 1.5 0 0 1 3 0V13",
     # narrative furniture
     "alert": "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3"
              "L13.7 3.9a2 2 0 0 0-3.4 0z",
@@ -64,6 +80,12 @@ ROLE_DEFAULT = {
     "tactic": "check",
     "action": "arrow",
     "follow": "star",
+    # the scripture profile's roles
+    "ayah": "book_open",
+    "hadith": "quote",
+    "tarjuma": "book_open",
+    "tashreeh": "lamp",
+    "amal": "hands",
 }
 
 

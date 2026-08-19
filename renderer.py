@@ -176,8 +176,16 @@ def probe_fonts() -> None:
     and the Urdu silently falls back to a Latin font that draws every letter
     as a box — a failure that looks like success in every log line.
     """
-    from config import FONT_DIR
+    from config import FONT_DIR, CONTENT_KIND
     required = ["NotoNastaliqUrdu-Bold.ttf", "NotoSansArabic-SemiBold.ttf"]
+    # Any channel that can have a scripture day puts Uthmani text on screen,
+    # so its face is not optional — a missing AmiriQuran would fall back to the
+    # sans and publish an ayah in the wrong script style, which is the same
+    # class of silent success this function was written to prevent. Checked on
+    # every run, including habit days: the point is to fail before a build, not
+    # on the morning the alternation happens to land on scripture.
+    if CONTENT_KIND != "habit":
+        required.append("AmiriQuran-Regular.ttf")
     missing = [f for f in required
                if not os.path.exists(os.path.join(FONT_DIR, f))]
     if missing:
