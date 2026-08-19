@@ -19,6 +19,7 @@ import os
 
 import anthropic
 
+import urdu
 from config import (
     ANTHROPIC_API_KEY, DEFAULT_CLAUDE_MODEL, NICHE, TOPICS_FILE, LOG_FILE,
     MAX_DURATION,
@@ -32,6 +33,13 @@ SYSTEM = """You write 60-second Urdu short-form video scripts. You write in
 natural, spoken Urdu — the Urdu a person actually speaks, not translated
 English and not literary Urdu. Short sentences. No English loanwords where a
 common Urdu word exists.
+
+EVERY word you write goes on screen in URDU SCRIPT. Never Roman Urdu, never
+Latin letters. The topic you are given is typed in Roman Urdu because that is
+what is convenient to type into a queue file — it is an instruction to you, not
+a sample of the writing. Answering in the script the question was asked in is
+the single most common failure here, and it produces a video whose subtitles
+are Urdu on some scenes and Latin on others.
 
 You are writing for "Sakoon Zindagi", an Urdu channel about sleep, health
 and peaceful daily living. The tone is calm and unhurried, never hyped. You may talk about daily routine,
@@ -91,6 +99,18 @@ def _client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
+def ask(system: str, user: str, max_tokens: int = 2000) -> str:
+    """One short model call, text in and text out.
+
+    Shared with content_islamic.py and handed to urdu.repair(), so the
+    transliteration pass does not need its own client or its own key handling.
+    """
+    msg = _client().messages.create(
+        model=DEFAULT_CLAUDE_MODEL, max_tokens=max_tokens,
+        system=system, messages=[{"role": "user", "content": user}])
+    return "".join(b.text for b in msg.content if b.type == "text").strip()
+
+
 def _posted() -> list[dict]:
     if not os.path.exists(LOG_FILE):
         return []
@@ -123,7 +143,13 @@ def next_topic() -> tuple[str, str]:
     # no Page is set up yet, or every poster failed — is a rehearsal, and
     # burning a topic for it means a week of setup quietly costs seven topics
     # and produces nothing. Rehearsals repeat today's topic until it lands.
-    entries = [e for e in _posted() if e.get("results")]
+    # Habit videos only. The channel alternates with the scripture build, and
+    # counting those here would step the pillar rotation twice a day — the
+    # rotation is meant to answer "how many of THESE have I posted".
+    # `kind` is absent from entries written before the alternation existed;
+    # those were all habit videos.
+    entries = [e for e in _posted()
+               if e.get("results") and e.get("kind", "habit") == "habit"]
     done = {e.get("topic", "") for e in entries}
 
     if isinstance(queue, list):
@@ -204,6 +230,13 @@ def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> 
                 print(f"  unknown icon {s['icon']!r} on {s['role']} — "
                       f"using the role default")
             s["icon"] = None
+
+    # After the shape is known to be right, before anything is narrated or
+    # rendered: every line that will be spoken or shown has to be in Urdu
+    # script. A Roman line is transliterated in one small call rather than
+    # costing the day's video — see urdu.py for why this is here and not in
+    # the renderer.
+    urdu.repair(spec, ask)
 
     spec["topic"] = topic
     spec["pillar"] = pillar or NICHE
