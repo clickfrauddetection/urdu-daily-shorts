@@ -13,6 +13,12 @@ quotation the model just invented.
 The verbatim scenes are assembled in code from the API's own fields and are
 marked `verbatim: True`, which two other modules read:
 
+The explanation is not free either. A hadith arrives from HadeethEnc with a
+scholar's sharh attached and the writer is told to stay inside it; a verse now
+arrives with Tafsir al-Muyassar attached and the writer is told the same. That
+was added after the first finished video, because until then the Qur'an path
+was the one place the model was reading scripture on its own.
+
   urdu.py           skips them — the Arabic is Arabic and the translation is
                     the translator's, and "repairing" either is the one edit
                     this repo must never make.
@@ -83,6 +89,12 @@ Urdu translation (this exact wording is what the narrator reads):
   {urdu}
 Reference: {citation}
 
+The published tafsir of this verse — Tafsir al-Muyassar, King Fahad Complex.
+YOUR EXPLANATION MUST STAY INSIDE WHAT THIS SAYS, in simpler Urdu. Do not add a
+meaning it does not carry, and do not extend the verse to a subject it does not
+raise. If it is short, say less rather than filling the gap yourself:
+{tafsir}
+
 Write, in Urdu script:
 
 - "hook": the first words on screen, before the recitation. Maximum 6 words.
@@ -93,8 +105,9 @@ Write, in Urdu script:
 - "hook_spoken": 8 to 14 words the narrator says over the hook.
 - "tashreeh": exactly TWO scenes. Each has a "headline" of at most 6 words for
   the screen, with <em></em> on one word, and "spoken" of 14 to 22 words. The
-  first says what the verse means. The second says what that changes for a
-  person listening at night on their phone.
+  first says what the verse means, following the tafsir above. The second says
+  what that changes for a person listening at night on their phone — this one
+  may speak about daily life, but it may not add a new meaning to the verse.
 - "amal": one thing to do today, that a person can actually do. "headline" at
   most 6 words, "spoken" 12 to 18 words. Not a ruling, not an act of worship
   with a count attached — something like turning to Allah in a difficulty,
@@ -225,8 +238,19 @@ def next_entry() -> tuple[dict, str]:
 def _written(item: dict) -> dict:
     """The five model-written pieces, as JSON."""
     if item["kind"] == "quran":
+        if not item.get("explanation"):
+            # Refused rather than written around. The whole reason a verse may
+            # be explained on this channel at all is that a published tafsir is
+            # standing behind the explanation; with none, the model would be
+            # interpreting the Qur'an on its own, which is the one thing this
+            # design exists to prevent. Losing a day's video is the cheap side
+            # of that trade.
+            raise ValueError(
+                f"No tafsir came back for {item['ref']} — refusing to explain "
+                f"a verse with nothing published standing behind it.")
         prompt = QURAN_PROMPT.format(
-            arabic=item["arabic"], urdu=item["urdu"], citation=item["citation"])
+            arabic=item["arabic"], urdu=item["urdu"], citation=item["citation"],
+            tafsir=item["explanation"])
     else:
         prompt = HADITH_PROMPT.format(
             arabic=item["arabic"], urdu=item["urdu"], citation=item["citation"],

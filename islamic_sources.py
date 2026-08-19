@@ -42,8 +42,8 @@ import time
 import requests
 
 from config import (
-    QURAN_AR_EDITION, QURAN_UR_EDITION, QURAN_RECITER, QURAN_UR_RECITER,
-    ISLAMIC_CACHE_DIR, HTTP_TIMEOUT, HTTP_RETRIES,
+    QURAN_AR_EDITION, QURAN_UR_EDITION, QURAN_TAFSIR, QURAN_RECITER,
+    QURAN_UR_RECITER, ISLAMIC_CACHE_DIR, HTTP_TIMEOUT, HTTP_RETRIES,
 )
 
 QURAN_API = "https://api.alquran.cloud/v1"
@@ -121,8 +121,11 @@ def ayah(ref: str) -> dict:
     Arabic and the translation separately leaves room for them to disagree
     about which verse they are, and nothing downstream would catch it.
     """
+    # All three in ONE call. Separately, the editions could disagree about
+    # which verse they are — and a tafsir of the wrong ayah is worse than no
+    # tafsir at all, because it would read as if it belonged.
     data = _get(f"{QURAN_API}/ayah/{ref}/editions/"
-                f"{QURAN_AR_EDITION},{QURAN_UR_EDITION}")
+                f"{QURAN_AR_EDITION},{QURAN_UR_EDITION},{QURAN_TAFSIR}")
     if not isinstance(data, dict) or data.get("code") != 200:
         raise SourceError(f"alquran.cloud did not return ayah {ref}: {data}")
     by_id = {e["edition"]["identifier"]: e for e in data["data"]}
@@ -132,6 +135,9 @@ def ayah(ref: str) -> dict:
         raise SourceError(f"ayah {ref} came back without both editions")
     if ar["numberInSurah"] != ur["numberInSurah"]:
         raise SourceError(f"ayah {ref}: the two editions disagree on the verse")
+    tafsir = by_id.get(QURAN_TAFSIR)
+    if tafsir and tafsir["numberInSurah"] != ar["numberInSurah"]:
+        raise SourceError(f"ayah {ref}: the tafsir is for a different verse")
 
     surah = ar["surah"]
     n_surah, n_ayah = surah["number"], ar["numberInSurah"]
@@ -146,6 +152,10 @@ def ayah(ref: str) -> dict:
         "surah_en": surah["englishName"],
         "arabic": ar["text"],
         "urdu": ur["text"],
+        # Never shown on screen and never spoken — it is the leash on the
+        # writer, nothing else. See config.QURAN_TAFSIR.
+        "explanation": (tafsir or {}).get("text", ""),
+        "tafsir_name": QURAN_TAFSIR,
         # What actually goes on screen under the ayah.
         "citation": f'{surah["name"]} — {ur_num(n_surah)}:{ur_num(n_ayah)}',
         # The GLOBAL ayah number, not the number within the surah, is what the

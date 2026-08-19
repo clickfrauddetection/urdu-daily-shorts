@@ -149,8 +149,8 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
    its own outline and these only take the edge off a blown-out sky. */
 .scrim {{ position:absolute; inset:0;
   background:
-    linear-gradient(180deg, rgba(6,10,18,.46) 0%, rgba(6,10,18,0) 30%),
-    linear-gradient(0deg,  rgba(6,10,18,.56) 0%, rgba(6,10,18,0) 38%); }}
+    linear-gradient(180deg, rgba(6,10,18,.38) 0%, rgba(6,10,18,0) 28%),
+    linear-gradient(0deg,  rgba(6,10,18,.48) 0%, rgba(6,10,18,0) 34%); }}
 
 .safe {{ position:absolute;
   top:{SAFE_TOP}px; bottom:{SAFE_BOTTOM}px;

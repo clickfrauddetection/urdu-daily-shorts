@@ -81,6 +81,23 @@ DEFAULT_CLAUDE_MODEL = os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 # changes the cache key, so old files are not served for the new edition.
 QURAN_AR_EDITION = os.environ.get("QURAN_AR_EDITION") or "quran-uthmani"
 QURAN_UR_EDITION = os.environ.get("QURAN_UR_EDITION") or "ur.jalandhry"
+# The published tafsir the explanation must stay inside.
+#
+# This closes the one real gap in the design. A hadith arrives from HadeethEnc
+# with a scholar's explanation attached, and content_islamic tells the writer to
+# stay inside it — so what reaches a viewer is a simplification of published
+# scholarship. A verse arrived with nothing of the kind, which meant the
+# explanation was the model's OWN reading of an ayah. The guard could stop it
+# quoting, ruling or taking sides; it could not stop it being shallow or subtly
+# wrong, and on this channel that is the failure that matters.
+#
+# al-Muyassar is the King Fahad Complex's plain-language tafsir: short, widely
+# accepted, and written to be understood rather than to be argued with — which
+# is what a sixty-second video needs. It is Arabic; the model reads it and
+# writes the Urdu. ar.jalalayn, ar.baghawi, ar.qurtubi and ar.waseet are the
+# alternatives the same API carries.
+QURAN_TAFSIR = os.environ.get("QURAN_TAFSIR") or "ar.muyassar"
+
 # Alafasy, measured and unhurried, which is the same register as the voice.
 QURAN_RECITER = os.environ.get("QURAN_RECITER") or "ar.alafasy"
 

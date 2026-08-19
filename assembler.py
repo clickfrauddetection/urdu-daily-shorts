@@ -23,14 +23,15 @@ from config import (
 FALLBACK_BG = "0x0A1628"
 
 # How far out of focus the footage sits. 0 turns the grade off entirely.
-# 2, down from 9 and then 7. The blur was doing a job the TYPE should be doing:
-# it bought contrast by destroying the picture, and what came back looked like a
-# grey rectangle with words on it. The type now carries its own dark outline and
+# 1, down from 9, then 7, then 2. Every step was the same discovery again: the
+# blur was doing a job the TYPE should be doing. It bought contrast by
+# destroying the picture, and what came back looked like a grey rectangle with
+# words on it. The type now carries its own dark outline and
 # a deep drop shadow (see the shadow stack in templates/scene.py), which holds
 # on any footage — so the footage gets to be footage. A whisper of softness is
 # kept rather than zero: it costs nothing and it stops H.264 spending its
 # bitrate on leaf detail nobody is looking at. BG_BLUR=0 turns it off.
-BG_BLUR = float(os.environ.get("BG_BLUR") or 2)
+BG_BLUR = float(os.environ.get("BG_BLUR") or 1)
 
 # Per FRAME, not per second — zoompan counts frames. 0.0011 at 25fps is about
 # 2.75% of scale a second, so a seven-second scene travels roughly a fifth of

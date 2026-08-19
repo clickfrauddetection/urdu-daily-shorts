@@ -120,10 +120,10 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
    channel carries, and it was tested against a worse case than that. */
 .scrim {{ position:absolute; inset:0;
   background:
-    radial-gradient(120% 70% at 50% 45%, rgba(6,10,18,.44) 0%,
-                    rgba(6,10,18,.62) 82%),
-    linear-gradient(180deg, rgba(6,10,18,.46) 0%, rgba(6,10,18,0) 26%),
-    linear-gradient(0deg,  rgba(6,10,18,.52) 0%, rgba(6,10,18,0) 34%); }}
+    radial-gradient(120% 70% at 50% 45%, rgba(6,10,18,.32) 0%,
+                    rgba(6,10,18,.50) 82%),
+    linear-gradient(180deg, rgba(6,10,18,.38) 0%, rgba(6,10,18,0) 24%),
+    linear-gradient(0deg,  rgba(6,10,18,.44) 0%, rgba(6,10,18,0) 30%); }}
 
 .brand {{ position:absolute; top:{SAFE_TOP - 74}px; right:{SAFE_RIGHT}px;
   font-family:'NastaliqUrdu','SansArabic',serif; direction:rtl;
