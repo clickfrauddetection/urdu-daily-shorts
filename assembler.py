@@ -23,7 +23,21 @@ from config import (
 FALLBACK_BG = "0x0A1628"
 
 # How far out of focus the footage sits. 0 turns the grade off entirely.
-BG_BLUR = float(os.environ.get("BG_BLUR") or 9)
+# 2, down from 9 and then 7. The blur was doing a job the TYPE should be doing:
+# it bought contrast by destroying the picture, and what came back looked like a
+# grey rectangle with words on it. The type now carries its own dark outline and
+# a deep drop shadow (see the shadow stack in templates/scene.py), which holds
+# on any footage — so the footage gets to be footage. A whisper of softness is
+# kept rather than zero: it costs nothing and it stops H.264 spending its
+# bitrate on leaf detail nobody is looking at. BG_BLUR=0 turns it off.
+BG_BLUR = float(os.environ.get("BG_BLUR") or 2)
+
+# Per FRAME, not per second — zoompan counts frames. 0.0011 at 25fps is about
+# 2.75% of scale a second, so a seven-second scene travels roughly a fifth of
+# the way to the cap. Slow enough that nobody can name what is moving, fast
+# enough that the frame is never the same twice.
+KEN_BURNS_RATE = float(os.environ.get("KEN_BURNS_RATE") or 0.0011)
+KEN_BURNS_MAX = float(os.environ.get("KEN_BURNS_MAX") or 1.12)
 
 # Flattens the bed's own dynamics before it is levelled and ducked. 4:1 above
 # roughly -24 dBFS, slow enough not to breathe on the beat.
@@ -39,10 +53,19 @@ MUSIC_ATTRIBUTION: dict[str, str] = {
     # Beds carried over from the Time Lens project. Confirm before the first
     # public post that these are the generated beds we own outright and not a
     # licensed third-party track — the credit line below is what goes out with
-    # every video, and it is a claim, not a placeholder.
+    # every video, and it is a claim, not a placeholder. Until that is
+    # confirmed they are not the default for anything: the policy below picks
+    # one of the two generated beds instead, and those have no such question
+    # hanging over them.
     "timelens_bed_choir.mp3": "Music: original score",
     "timelens_bed_choir_dark.mp3": "Music: original score",
     "timelens_bed_swell.mp3": "Music: original score",
+    # Written by make_ambience.py out of ffmpeg's own noise generator. Not
+    # music: filtered brown noise, no pitch, no beat, no melody. Its licence
+    # is that this repository made it, which is the only provenance that needs
+    # no checking.
+    "ambient_room.mp3": "Ambience: generated for this channel",
+    "ambient_night.mp3": "Ambience: generated for this channel",
 }
 
 
@@ -54,7 +77,7 @@ def _run(args: list[str], what: str) -> None:
 
 
 def compose_scene(layer_mov: str, bg_path: str | None, bg_offset: float,
-                  duration: float, name: str) -> str:
+                  duration: float, name: str, index: int = 0) -> str:
     """Lay one scene's alpha text layer over the background footage.
 
     `bg_offset` is where in the clip this scene starts. Passing a running
@@ -65,6 +88,14 @@ def compose_scene(layer_mov: str, bg_path: str | None, bg_offset: float,
     The slow drift is a sine, not a linear pan: a linear pan reaches the edge
     of its crop margin and stops dead, and the stop is more noticeable than the
     movement ever was.
+
+    On top of the drift, each scene pushes in or pulls out — alternating, by
+    `index`. This is the fix for the complaint that the finished videos had no
+    life in them. The drift alone moves the frame sideways by about fifty
+    pixels over ten seconds, which on a phone is indistinguishable from a still
+    image; a continuous change of SCALE reads as movement even when it is
+    slower than that, and alternating its direction means two consecutive
+    scenes do not feel like one long slow creep in the same direction.
     """
     os.makedirs(TEMP_DIR, exist_ok=True)
     out = os.path.join(TEMP_DIR, f"{name}_composed.mp4")
@@ -75,19 +106,47 @@ def compose_scene(layer_mov: str, bg_path: str | None, bg_offset: float,
              f"x=(iw-ow)/2+sin(t/9)*{(over_w - WIDTH) // 2}:"
              f"y=(ih-oh)/2+cos(t/13)*{(over_h - HEIGHT) // 3}")
 
+    # `in` is the frame count within THIS scene's own segment, so every scene
+    # gets its own move rather than inheriting where the last one stopped. The
+    # first scene pushes in hardest: it is the two seconds that decide whether
+    # anyone sees the rest.
+    rate = KEN_BURNS_RATE * (1.6 if index == 0 else 1.0)
+    if index % 2 == 0:
+        zoom = f"min(1+{rate:.5f}*in,{KEN_BURNS_MAX})"
+    else:
+        zoom = f"max({KEN_BURNS_MAX}-{rate:.5f}*in,1)"
+    ken = (f"zoompan=z='{zoom}':d=1:x='iw/2-(iw/zoom/2)':"
+           f"y='ih/2-(ih/zoom/2)':s={WIDTH}x{HEIGHT}:fps={FPS}")
+
     # Blurred and pulled down before the text goes on. The first live video ran
     # over a rain-on-glass clip: thousands of little high-contrast highlights,
     # directly behind the headline, and the type had to fight every one of
     # them. The background's job here is mood, not detail — nobody watches a
     # text video for the footage — and out of focus it also stops competing
-    # with the words. This is the difference between a video that reads at a
-    # glance and one a viewer scrolls past because it looked like work.
-    grade = (f"gblur=sigma={BG_BLUR},"
-             f"eq=brightness=-0.10:saturation=0.72:contrast=0.94")
+    # with the words.
+    #
+    # The numbers were softened after the first run of finished videos: sigma 9
+    # with saturation .72 and brightness -.10 did not read as "out of focus
+    # behind type", it read as a grey rectangle, and a grey rectangle is what
+    # "there is no life in these" looks like. The scrim in templates/scene.py
+    # is what actually buys the contrast under the text — it is a gradient
+    # exactly where the type sits — so the picture itself does not also have to
+    # be flattened. The hook keeps more detail still: frame one is the only
+    # frame most viewers will ever see, and it should look like something.
+    blur = BG_BLUR * (0.6 if index == 0 else 1.0)
+    grade = (f"gblur=sigma={blur:g},"
+             # Barely a grade now. Green mountain footage in daylight is the
+             # point of the picture; pulling it down half a stop and desaturating
+             # it was how the old "no life in these" look was made.
+             f"eq=brightness=-0.02:saturation=1.02:contrast=1.04,"
+             # Pulls the corners down so the eye lands in the middle of the
+             # frame, where the type is. Cheap, and it is most of what
+             # separates footage-with-text-on-it from a shot.
+             f"vignette=PI/6")
 
     if bg_path:
         src = ["-stream_loop", "-1", "-ss", f"{bg_offset:.3f}", "-i", bg_path]
-        bg_chain = f"[0:v]{drift},{grade},fps={FPS},format=rgba[bg]"
+        bg_chain = f"[0:v]{drift},{ken},{grade},fps={FPS},format=rgba[bg]"
     else:
         # Not an error path worth failing on, but it must look deliberate
         # rather than broken: the brand's own dark blue, not black.
@@ -180,11 +239,44 @@ def mux_voice(video_path: str, clips: list[dict], starts: list[float],
 # the quiet passages and climbs over the voice in the loud ones, and the
 # sidechain ducker pumps chasing it. `MUSIC_TAME` below is what makes it usable
 # rather than just louder.
-MUSIC_TRACK = os.environ.get("MUSIC_TRACK") or "timelens_bed_swell.mp3"
+MUSIC_TRACK = os.environ.get("MUSIC_TRACK") or ""
+
+# What is allowed under the voice, chosen PER VIDEO rather than per channel —
+# because the channel now alternates, and the answer is different on the two
+# kinds of day:
+#
+#   "bed"      a scored music bed. The habit videos.
+#   "ambient"  room tone only — see make_ambience.py. This is what a scripture
+#              day gets. Instrumental music under recitation is not something
+#              an Urdu Islamic video can do: a good part of the audience holds
+#              it impermissible, and a melody under an ayah competes with the
+#              ayah either way. Silence alone reads as a broken upload, so what
+#              plays is air, not music.
+#   "none"     nothing at all. NO_MUSIC=1 forces this from anywhere.
+#
+# main.py passes the day's policy down; this is only the default for a caller
+# that does not.
+DEFAULT_MUSIC_POLICY = ("none" if os.environ.get("NO_MUSIC") else
+                        (os.environ.get("MUSIC_POLICY") or "bed"))
 
 
-def pick_music() -> tuple[str | None, str]:
+def _policy(policy: str | None) -> str:
+    """NO_MUSIC always wins, whatever the caller asked for."""
+    if os.environ.get("NO_MUSIC"):
+        return "none"
+    return policy or DEFAULT_MUSIC_POLICY
+POLICY_DEFAULT = {
+    "bed": "timelens_bed_swell.mp3",
+    "ambient": "ambient_night.mp3",
+}
+
+
+def pick_music(policy: str | None = None) -> tuple[str | None, str]:
     """The pinned track, or the first licensed one if it is missing."""
+    policy = _policy(policy)
+    if policy == "none":
+        print("  music policy is 'none' — the voice carries the video alone")
+        return None, ""
     if not os.path.isdir(MUSIC_DIR):
         return None, ""
     licensed = [fn for fn in sorted(os.listdir(MUSIC_DIR))
@@ -197,22 +289,41 @@ def pick_music() -> tuple[str | None, str]:
                   f"Add the licence line before this track can be used.")
     if not licensed:
         return None, ""
-    fn = MUSIC_TRACK if MUSIC_TRACK in licensed else licensed[0]
-    if fn != MUSIC_TRACK:
-        print(f"  {MUSIC_TRACK} not in data/music — using {fn}")
-    print(f"  music bed: {fn}")
+
+    # An explicit MUSIC_TRACK wins; otherwise the policy's own bed. The
+    # fallback deliberately stays INSIDE the policy — an "ambient" channel
+    # whose file is missing gets no bed rather than the first mp3 in the
+    # folder, because for that channel the wrong file is worse than none.
+    wanted = MUSIC_TRACK or POLICY_DEFAULT.get(policy, "")
+    if wanted in licensed:
+        fn = wanted
+    elif policy == "ambient":
+        print(f"  {wanted} is not in data/music — run make_ambience.py. "
+              f"Shipping without a bed rather than substituting music.")
+        return None, ""
+    else:
+        fn = licensed[0]
+        print(f"  {wanted} not in data/music — using {fn}")
+    print(f"  bed: {fn}  [policy: {policy}]")
     return os.path.join(MUSIC_DIR, fn), MUSIC_ATTRIBUTION[fn]
 
 
-def add_music(video_path: str, duration: float) -> str:
+def add_music(video_path: str, duration: float,
+              silence: list[tuple[float, float]] | None = None,
+              policy: str | None = None) -> str:
     """Duck a music bed under the narration.
 
     Sidechained rather than set to a fixed low volume: a constant level either
     fights the voice or vanishes under it, while ducking lets the bed sit back
     for a line and come up in the gap — and the gaps are where the headline is
     being read.
+
+    `silence` is a list of (start, end) windows in which the bed is muted
+    outright rather than ducked. A scripture day passes the recitation's own
+    window: ducking is not enough there, because ducking is a level
+    decision and this is not one. Nothing plays under the Qur'an.
     """
-    track, credit = pick_music()
+    track, credit = pick_music(policy)
     if not track:
         print("  no licensed music track — shipping without a bed")
         return video_path
@@ -233,6 +344,20 @@ def add_music(video_path: str, duration: float) -> str:
            f"{MUSIC_TAME},"
            f"afade=t=in:st=0:d=1.5,afade=t=out:st={fade_out:.3f}:d=2,"
            f"loudnorm=I={MUSIC_BED_LUFS}:TP=-8:LRA=5")
+
+    # Muted last, after levelling, so loudnorm cannot bring the silence back
+    # up — and as a fade out and a fade back in rather than a switch, because
+    # a bed that stops dead is a click, and a click before an ayah is worse
+    # than the bed would have been.
+    ramp = 0.5
+    for start, end in (silence or []):
+        out_at = max(start - ramp, 0.0)
+        back_at = min(end, max(duration - ramp, 0.0))
+        if back_at <= out_at:
+            continue
+        bed += (f",afade=t=out:st={out_at:.3f}:d={ramp}"
+                f",afade=t=in:st={back_at:.3f}:d={ramp}")
+        print(f"  bed silent {out_at:.1f}s–{back_at + ramp:.1f}s")
 
     if has_audio:
         chain = (f"[0:a]aresample={AUDIO_SAMPLE_RATE},asplit=2[v][sc];{bed}[b];"

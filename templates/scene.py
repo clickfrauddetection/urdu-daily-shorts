@@ -22,7 +22,7 @@ import os
 
 from config import (
     WIDTH, HEIGHT, PALETTE, SAFE_TOP, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT,
-    FONT_DIR,
+    FONT_DIR, CHANNEL_NAME_UR,
 )
 from icons import icon, ROLE_DEFAULT
 
@@ -103,6 +103,9 @@ def render_scene(scene: dict, duration: float, lead: float,
     # repo. A script that ships one Roman Urdu headline among seven Urdu ones
     # should get one left-to-right headline, not a reversed one.
     h_dir, h_font = script_of(scene["headline"], "display")
+    # The hook is punched in; after that the entry alternates, so no two
+    # consecutive scenes open with the same move.
+    h_anim = "punch" if index == 0 else ("rise", "slide")[index % 2]
     cap_text = " ".join(w for w, _, _ in (scene.get("words") or []))
     c_dir, c_font = script_of(cap_text, "body")
 
@@ -122,15 +125,32 @@ def render_scene(scene: dict, duration: float, lead: float,
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 html, body {{ background:transparent; width:{WIDTH}px; height:{HEIGHT}px;
   overflow:hidden; }}
-body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
+body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
+  /* The whole legibility budget, in one place, and it is spent on the TYPE
+   rather than on the picture. Four 2px offsets make a dark outline around
+   every glyph — a real -webkit-text-stroke would be centred on the stroke and
+   eat Nastaliq's hairlines from both sides, which on this typeface is the
+   difference between bold and broken. Then a close drop shadow to lift the
+   word off whatever is behind it, and a wide soft one to darken the footage
+   immediately around it. This is what lets the background be sharp, bright
+   greenery instead of a blurred grey wash. */
+--edge:
+  2px 0 3px rgba(4,8,14,.95), -2px 0 3px rgba(4,8,14,.95),
+  0 2px 3px rgba(4,8,14,.95), 0 -2px 3px rgba(4,8,14,.95),
+  0 3px 8px rgba(4,8,14,.9),
+  0 6px 30px rgba(4,8,14,.8),
+  0 0 60px rgba(4,8,14,.55); }}
 
 /* Scrim. Two gradients rather than a flat wash: the middle of the frame stays
    open so the footage is still visible, while the bands the type sits in are
    dark enough to hold contrast on a bright clip. */
+/* Much lighter than it was. The bands used to be what made the type readable,
+   which meant two thirds of the picture was painted over; now the type carries
+   its own outline and these only take the edge off a blown-out sky. */
 .scrim {{ position:absolute; inset:0;
   background:
-    linear-gradient(180deg, rgba(6,10,18,.80) 0%, rgba(6,10,18,0) 34%),
-    linear-gradient(0deg,  rgba(6,10,18,.88) 0%, rgba(6,10,18,0) 42%); }}
+    linear-gradient(180deg, rgba(6,10,18,.46) 0%, rgba(6,10,18,0) 30%),
+    linear-gradient(0deg,  rgba(6,10,18,.56) 0%, rgba(6,10,18,0) 38%); }}
 
 .safe {{ position:absolute;
   top:{SAFE_TOP}px; bottom:{SAFE_BOTTOM}px;
@@ -141,8 +161,28 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
    holds people who would otherwise bail at the halfway mark */
 .pips {{ display:flex; gap:9px; justify-content:flex-start; margin-bottom:30px; }}
 .pip {{ width:{int(770 / max(total, 1))}px; height:11px; border-radius:6px;
-  background:rgba(255,255,255,.28); }}
+  background:rgba(255,255,255,.28); position:relative; overflow:hidden; }}
 .pip.on {{ background:{tone}; box-shadow:0 0 14px {tone}55; }}
+/* The pip for the scene being watched FILLS, over that scene's own length,
+   rather than switching on at the cut. A row of static dots says how far
+   through you are; a filling one says the video is going somewhere, and it is
+   the only thing on screen that moves continuously for the whole scene.
+   Right to left, because the body is RTL and it should run the way the text
+   does. */
+.pip.now::after {{ content:''; position:absolute; top:0; bottom:0; right:0;
+  width:0; background:{tone}; box-shadow:0 0 14px {tone}55;
+  animation:fill {duration:.3f}s linear both paused; }}
+@keyframes fill {{ from {{ width:0; }} to {{ width:100%; }} }}
+
+/* The channel's name, small, in every frame. A viewer who saves or reshares a
+   frame takes the name with it, and a viewer who has seen three of these
+   recognises the account before reading a word. Dim on purpose: identity, not
+   a watermark competing with the headline. */
+.brand {{ position:absolute; top:{SAFE_TOP - 74}px; right:{SAFE_RIGHT}px;
+  font-family:'NastaliqUrdu','SansArabic',serif; direction:rtl;
+  font-size:30px; line-height:1.9; color:rgba(247,250,252,.55);
+  letter-spacing:.5px; }}
+.brand b {{ color:{tone}; font-weight:700; }}
 
 /* Anchored to the top of the safe box, not centred in it. Centred, the
    headline floated in the middle of the frame with a third of the picture
@@ -158,6 +198,10 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
   background:{tone}1F; border:3px solid {tone}59;
   opacity:0; filter:drop-shadow(0 8px 26px rgba(0,0,0,.55));
   animation:pop .55s cubic-bezier(.2,.9,.3,1.3) both paused; }}
+/* On its own element, not as a second animation on .ic-wrap: two animations
+   on one element both writing `transform` means the later one wins from frame
+   zero, and the pop would never be seen. */
+.ic-float {{ display:flex; animation:float 6s ease-in-out infinite both paused; }}
 .ic {{ color:{tone}; }}
 /* No stroke-draw. It used a fixed dasharray of 140, which is longer than some
    of these paths and shorter than others, so the icon spent its first second
@@ -171,10 +215,18 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
      the next. This is the number that most often needs raising, never lowering. */
   line-height:2.15;
   margin-top:20px; text-align:{"right" if h_dir == "rtl" else "left"};
-  text-shadow:0 4px 26px rgba(0,0,0,.75);
-  opacity:0; animation:rise .7s cubic-bezier(.2,.8,.3,1) both paused;
+  text-shadow:var(--edge);
+  opacity:0; animation:{h_anim} .7s cubic-bezier(.2,.8,.3,1) both paused;
   animation-delay:.28s; }}
-.h em {{ font-style:normal; color:{tone}; }}
+/* The emphasised word does not simply arrive coloured — it lands a beat after
+   the line does, and it lands slightly large. One word moving after everything
+   else has settled is what makes a still frame of type feel like it is being
+   said to you, and it costs nothing: the word is already marked up, it was
+   just being painted a different colour and left there. */
+.h em {{ font-style:normal; color:{tone}; display:inline-block;
+  text-shadow:var(--edge), 0 0 30px {tone}4D;
+  animation:land .5s cubic-bezier(.2,.9,.3,1.4) both paused;
+  animation-delay:.72s; }}
 
 /* the spoken line, lower third, inside the safe box */
 .cap {{ text-align:center; }}
@@ -187,7 +239,7 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
   /* Nastaliq, so: smaller than the sans caption was, and far more leading.
      Its descenders run deep and two lines at 1.85 clipped into each other. */
   font-size:46px; line-height:2.05;
-  text-shadow:0 3px 18px rgba(0,0,0,.85); }}
+  text-shadow:var(--edge); }}
 /* `forwards`, not `both`, and this is the whole trick of the karaoke line: with
    `both` the word would hold the from-state before its delay, which is the same
    colour it ends on — every word lit from frame zero. With `forwards` an
@@ -203,22 +255,41 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased; }}
    can stay slow, because a trailing word settling is not something the ear
    tracks. */
 @keyframes lit {{
-  0%   {{ color:{tone}; text-shadow:0 0 26px {tone}66, 0 3px 18px rgba(0,0,0,.85); }}
-  70%  {{ color:{tone}; text-shadow:0 0 26px {tone}66, 0 3px 18px rgba(0,0,0,.85); }}
-  100% {{ color:{p["ink"]}; text-shadow:0 3px 18px rgba(0,0,0,.85); }} }}
+  0%   {{ color:{tone}; text-shadow:var(--edge), 0 0 26px {tone}66; }}
+  70%  {{ color:{tone}; text-shadow:var(--edge), 0 0 26px {tone}66; }}
+  100% {{ color:{p["ink"]}; text-shadow:var(--edge); }} }}
 @keyframes pop  {{ from {{ opacity:0; transform:scale(.6) translateY(20px); }}
                    to   {{ opacity:1; transform:none; }} }}
 @keyframes rise {{ from {{ opacity:0; transform:translateY(38px); }}
                    to   {{ opacity:1; transform:none; }} }}
+/* Entry alternates by scene. Eight scenes that all begin with the same
+   upward move is a slideshow with one transition; the same eight, half of
+   them arriving from the side the language is read from, is edited. */
+@keyframes slide {{ from {{ opacity:0; transform:translateX(52px); }}
+                    to   {{ opacity:1; transform:none; }} }}
+/* The hook only. It is the frame that decides whether the rest is watched. */
+@keyframes punch {{ from {{ opacity:0; transform:scale(1.14); }}
+                    to   {{ opacity:1; transform:none; }} }}
+@keyframes land  {{ 0%   {{ transform:scale(1); }}
+                    45%  {{ transform:scale(1.13); }}
+                    100% {{ transform:scale(1); }} }}
+/* Never still, never moving enough to notice. The icon is the only thing in
+   frame with no words on it, so it is the one element that can carry motion
+   through the middle of a scene without pulling the eye off the text. */
+@keyframes float {{ 0%   {{ transform:translateY(0); }}
+                    50%  {{ transform:translateY(-14px); }}
+                    100% {{ transform:translateY(0); }} }}
 </style>
 <div class="scrim"></div>
+<div class="brand">{CHANNEL_NAME_UR}</div>
 <div class="safe">
   <div class="pips">
-    {"".join(f'<div class="pip{" on" if i <= index else ""}"></div>'
+    {"".join(f'<div class="pip{" on" if i < index else ""}'
+             f'{" now" if i == index else ""}"></div>'
              for i in range(total))}
   </div>
   <div class="top">
-    <div class="ic-wrap">{icon(name, 110)}</div>
+    <div class="ic-wrap"><div class="ic-float">{icon(name, 110)}</div></div>
     <div class="h">{scene["headline"]}</div>
   </div>
   <div class="cap"><div class="cap-box">{

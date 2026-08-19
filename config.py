@@ -6,6 +6,39 @@ new Meta app / YouTube client is not needed, only new repo secrets.
 """
 import os
 
+# -------------------------------------------------------------------- channel
+# ONE channel, two kinds of video, alternating day by day.
+#
+# The first version of this put the scripture videos on a second Page with
+# their own secrets. Naseem's call, and the right one: two Pages, two YouTube
+# channels, two sets of tokens and two audiences to grow from zero is a lot of
+# setup for something that can simply alternate. So the credentials below are
+# the ones this repo already had, and what changes from one morning to the next
+# is what gets built, not where it goes.
+#
+#   habit      the eight-scene hook/problem/cause/tactic script in content.py
+#   scripture  the ayah-or-hadith build in content_islamic.py, whose sacred
+#              text is fetched verbatim and never written by a model
+#
+# CONTENT_KIND decides which:
+#
+#   "mixed"      alternate. Odd-numbered posts are scripture. This is the
+#                default and what a normal day does.
+#   "habit"      only the wellness videos, as before this existed.
+#   "scripture"  only the Islamic ones.
+#
+# The alternation counts POSTED videos, not calendar days, so a day the run
+# fails does not flip the channel's rhythm — tomorrow picks up where the last
+# published video left off. main.py reads it; `--kind` overrides it for one run.
+NICHE = os.environ.get("NICHE") or "daily"
+CONTENT_KIND = (os.environ.get("CONTENT_KIND") or "mixed").lower()
+
+CHANNEL_NAME = os.environ.get("CHANNEL_NAME") or "Sakoon Zindagi"
+# What actually goes on screen. The Latin name is for logs and filenames; a
+# Nastaliq frame carrying "Sakoon Zindagi" in Arial is exactly the machine-made
+# look this channel is trying not to have.
+CHANNEL_NAME_UR = os.environ.get("CHANNEL_NAME_UR") or "سکونِ زندگی"
+
 # ---------------------------------------------------------------- credentials
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -37,12 +70,48 @@ YOUTUBE_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN", "")
 # rather than degrading, and it has taken those repos down for days at a time.
 DEFAULT_CLAUDE_MODEL = os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
-# ---------------------------------------------------------------------- niche
-# The whole channel's subject, in one place. Everything downstream — topics,
-# the writing prompt, the safety guard, the hashtags — reads from here, so a
-# second channel is a second profile, not a second repo.
-# The channel is "Sakoon Zindagi" — health, sleep and peaceful living.
-NICHE = os.environ.get("NICHE") or "daily"
+# ------------------------------------------------------------ islamic sources
+# See islamic_sources.py. Both endpoints are keyless; what is configurable here
+# is WHICH translation and WHICH reciter, because those are editorial choices a
+# channel makes once and then keeps.
+#
+# ur.jalandhry is Fateh Muhammad Jalandhry's translation — the plainest of the
+# Urdu editions alquran.cloud carries, and plain is what a 40-second video
+# needs. ur.junagarhi and ur.kanzuliman are the alternatives; changing this
+# changes the cache key, so old files are not served for the new edition.
+QURAN_AR_EDITION = os.environ.get("QURAN_AR_EDITION") or "quran-uthmani"
+QURAN_UR_EDITION = os.environ.get("QURAN_UR_EDITION") or "ur.jalandhry"
+# Alafasy, measured and unhurried, which is the same register as the voice.
+QURAN_RECITER = os.environ.get("QURAN_RECITER") or "ar.alafasy"
+
+# Who READS the Urdu translation.
+#
+#   "human"  Shamshad Ali Khan's recorded reading of the Jalandhry translation,
+#            ayah by ayah, from the same CDN as the recitation. This is the
+#            default, and the reason is pronunciation: everything else in the
+#            video is the channel's synthetic narrator, and a synthetic voice
+#            gets a word wrong now and then. On a hook or an explanation that
+#            is a blemish; on the translation of an ayah it is the one place
+#            this channel cannot afford it. So no synthetic voice touches
+#            scripture at all — the Arabic is the qari's, the Urdu is his.
+#   "voice"  the channel's own narrator reads it, as it reads everything else.
+#            One voice throughout, at the cost above.
+#
+# Qur'an only. There is no recorded Urdu edition of the hadith collection, so a
+# hadith translation is narrated either way.
+TARJUMA_AUDIO = (os.environ.get("TARJUMA_AUDIO") or "human").lower()
+QURAN_UR_RECITER = os.environ.get("QURAN_UR_RECITER") or "ur.khan"
+# How much of the frame the recitation is allowed to own before the narrator
+# speaks. The ayah is recited in full first, in silence — this is the moment
+# the video exists for, and talking over it is the one edit that would make
+# the whole channel worthless.
+RECITATION_PAD = float(os.environ.get("RECITATION_PAD") or 0.5)
+RECITATION_GAIN = float(os.environ.get("RECITATION_GAIN") or 1.0)
+
+ISLAMIC_QUEUE_FILE = "data/islamic_queue.json"
+ISLAMIC_CACHE_DIR = "data/cache"
+HTTP_TIMEOUT = int(os.environ.get("HTTP_TIMEOUT") or 25)
+HTTP_RETRIES = int(os.environ.get("HTTP_RETRIES") or 3)
 
 # ------------------------------------------------------------------- geometry
 WIDTH, HEIGHT = 1080, 1920
@@ -201,5 +270,9 @@ OUT_DIR = "out"
 DATA_DIR = "data"
 FONT_DIR = "fonts"
 MUSIC_DIR = "data/music"
+# One log for one channel. It is not just a record: both queues read it back —
+# the habit queue takes tomorrow's pillar from how many videos exist, the
+# scripture queue skips what has already gone out, and main.py takes the
+# alternation from the same count. Every entry carries its `kind`.
 LOG_FILE = "data/posted_log.json"
 TOPICS_FILE = "data/topics.json"
