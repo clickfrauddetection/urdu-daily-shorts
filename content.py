@@ -9,10 +9,13 @@ does. `data/topics.json` is filled by hand once, drained one entry a day, and
 the queue running low is a visible, fixable condition rather than a silent
 decline in quality.
 
-The shape is fixed: hook, problem, cause, three tactics, action, follow. Fixed
-because a 60-second video has room for exactly one idea, and because a fixed
-shape lets the icon for each role be decided in code rather than invented by
-the model — see icons.ROLE_DEFAULT.
+There are three shapes and the day picks between them — see FORMATS. Each is
+fixed in itself, because a 60-second video has room for exactly one idea and
+because a fixed set of roles lets the icon for each scene be decided in code
+rather than invented by the model (icons.ROLE_DEFAULT). What is NOT fixed any
+more is which of the three, and that matters twice over: one shape forever is
+what a viewer means by "the same video again", and it is the exact profile
+YouTube's Inauthentic Content policy demonetises.
 """
 import json
 import os
@@ -26,8 +29,55 @@ from config import (
 )
 from icons import known as known_icons
 
-ROLES = ["hook", "problem", "cause", "tactic", "tactic", "tactic",
-         "action", "follow"]
+# THREE shapes, not one, and the day picks between them. This is not
+# decoration. The old build had exactly one shape — hook, problem, cause, three
+# tactics, action, follow — for every video forever, which is what "wohi ghisa
+# pita" means when a viewer says it, and it is also precisely the profile
+# YouTube's Inauthentic Content policy demonetises: mass-produced, templated,
+# repetitive. A channel whose videos are built three different ways reads as
+# made rather than as generated, on both counts.
+#
+# Every role here needs an entry in icons.ROLE_DEFAULT, because the icon for a
+# role is decided in code rather than invented by the model.
+FORMATS = {
+    "masla": {
+        "roles": ["hook", "problem", "cause", "tactic", "tactic", "tactic",
+                  "action", "follow"],
+        "brief": """The problem, its cause, and three things to do about it.
+- "problem": what goes wrong, in the words someone would use about their own
+  day. Not a diagnosis of them — a description they recognise.
+- "cause": WHY it happens. One reason, plainly, no lecture.
+- each "tactic": ONE concrete thing to do, with a when or a how much, about
+  routine and timing — never a medical quantity. Three different things, not
+  one thing said three ways.
+- "action": the single smallest thing to try today.""",
+    },
+    "teen_ghaltiyan": {
+        "roles": ["hook", "ghalti", "ghalti", "ghalti", "sudhaar",
+                  "action", "follow"],
+        "brief": """Three mistakes, then the correction.
+- each "ghalti": ONE mistake nearly everyone makes, named flatly and without
+  scolding. Three genuinely different mistakes, not three versions of one.
+- "sudhaar": what to do instead. ONE replacement, not three.
+- "action": the smallest version of that correction, today.""",
+    },
+    "pehle_baad": {
+        "roles": ["hook", "pehle", "baad", "wajah", "tactic",
+                  "action", "follow"],
+        "brief": """What a day looks like before, what it looks like after, and why.
+- "pehle": the day as it is now. One concrete moment of it — a time, a room, a
+  feeling. Not a list.
+- "baad": the same moment once this one thing changes. Modest and believable.
+  No transformed lives, no promises with a date on them.
+- "wajah": why that change does what it does.
+- "tactic": the one thing that gets a person from the first to the second, with
+  a when or a how much.
+- "action": today's smallest version of it.""",
+    },
+}
+
+# Kept for anything that still imports it; the shape now comes from FORMATS.
+ROLES = FORMATS["masla"]["roles"]
 
 SYSTEM = """You write 60-second Urdu short-form video scripts. You write in
 natural, spoken Urdu — the Urdu a person actually speaks, not translated
@@ -41,20 +91,32 @@ a sample of the writing. Answering in the script the question was asked in is
 the single most common failure here, and it produces a video whose subtitles
 are Urdu on some scenes and Latin on others.
 
-You are writing for "Sakoon Zindagi", an Urdu channel about sleep, health
-and peaceful daily living. The tone is calm and unhurried, never hyped. You may talk about daily routine,
-sleep timing, light, water, walking, screen use, meal timing and rest. You must
-NEVER: name a disease or diagnosis, claim anything cures or treats anything,
-mention any medicine, supplement, dose or quantity, or tell anyone they do not
-need a doctor. Say what to DO, never what it will cure.
+You are writing for "Sakoon Zindagi", an Urdu channel about living a steadier
+life: sleep, movement, food habits, money, time, the phone, the home, and the
+plain rules people wish someone had told them at twenty. The tone is calm and
+unhurried, never hyped, and never scolding — a person watching this at night is
+tired, not lazy.
+
+You may talk about routine, sleep timing, light, water, walking and exercise,
+what and WHEN a person eats, screen use, spending, and how a day is arranged.
+
+You must NEVER: name a disease or diagnosis, claim anything cures or treats
+anything, mention any medicine, supplement, dose or quantity, prescribe
+calories, grams, kilos or a weight to reach, promise a result by a date, or
+tell anyone they do not need a doctor. On food and exercise you talk about
+HABITS — what to do and when — never about a body a person should end up with.
+Say what to DO, never what it will cure.
 
 Output ONLY valid JSON. No markdown fence, no commentary."""
 
 TEMPLATE = """Topic for today: {topic}
 Niche: {niche}
 
-Write the script as eight scenes, in this exact order and with these exact
-roles: hook, problem, cause, tactic, tactic, tactic, action, follow.
+Write the script as {count} scenes, in this exact order and with these exact
+roles: {roles}
+
+The shape of this one:
+{brief}
 
 For each scene:
 - "headline": the words ON SCREEN. Urdu. Maximum 6 words. Wrap the single most
@@ -70,19 +132,12 @@ Rules:
   seconds you are given announcing that the video exists. Put the claim itself
   in the hook: name the cause, or the number, or the mistake, immediately.
 - No scene may open by describing what the video will do. Say the thing.
-- The "follow" scene asks once, plainly, and names what they get by
-  following. It is not a summary of the video they just watched. The
-  channel is called Sakoon Zindagi — sleep, health and peaceful living —
-  so say what the next videos will help with, in those terms.
-- Each "tactic" is ONE concrete thing to do today, with a when or a how much
-  that is about routine and timing, never a medical quantity.
-- "action" is the single smallest thing to try tonight.
-- "follow" asks for a follow, and names the channel's subject so the ask has a
-  reason. It offers nothing to buy.
-- Total spoken words across all eight scenes: 95 to 120. This is a hard budget.
-  Spoken Urdu runs at roughly two words a second, so 150 words is over a
-  minute before a single pause is counted — which is how the first live run
-  overran and had to be re-asked.
+- The "follow" scene asks once, plainly, and names what they get by following.
+  It is not a summary of the video they just watched. It offers nothing to buy.
+- Total spoken words across ALL scenes: {words}. This is a hard budget. Spoken
+  Urdu runs at roughly two words a second, so 150 words is over a minute before
+  a single pause is counted — which is how the first live run overran and had
+  to be re-asked.
 
 Also produce:
 - "title": Urdu, under 70 characters, for the YouTube Short.
@@ -105,6 +160,11 @@ def ask(system: str, user: str, max_tokens: int = 2000) -> str:
     Shared with content_islamic.py and handed to urdu.repair(), so the
     transliteration pass does not need its own client or its own key handling.
     """
+    fmt = fmt or next_format()
+    shape = FORMATS[fmt]
+    roles = shape["roles"]
+    print(f"  shape: {fmt} ({len(roles)} scenes)")
+
     msg = _client().messages.create(
         model=DEFAULT_CLAUDE_MODEL, max_tokens=max_tokens,
         system=system, messages=[{"role": "user", "content": user}])
@@ -182,13 +242,39 @@ def next_topic() -> tuple[str, str]:
         f"to {TOPICS_FILE} — do not let the model invent them.")
 
 
-def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> dict:
+def next_format() -> str:
+    """Which shape today's habit video takes.
+
+    Rotated on the count of habit videos already posted, the same way the
+    pillar is — so consecutive videos differ in shape as well as in subject,
+    and the rotation survives a failed morning because it counts posts rather
+    than dates. FORMAT=teen_ghaltiyan pins it for one run.
+    """
+    forced = os.environ.get("FORMAT")
+    if forced:
+        if forced not in FORMATS:
+            raise ValueError(f"No format named {forced!r}. Have: "
+                             + ", ".join(FORMATS))
+        return forced
+    posted = len([e for e in _posted()
+                  if e.get("results") and e.get("kind", "habit") == "habit"])
+    names = list(FORMATS)
+    return names[posted % len(names)]
+
+
+def write_script(topic: str, pillar: str = "", max_words: int | None = None,
+                 fmt: str | None = None) -> dict:
     """Ask Claude for the day's script and validate its shape before returning.
 
     Validated here rather than at render time because a malformed script that
     reaches the renderer fails eight scenes in, after the TTS calls have
     already been paid for and spent against the day's quota.
     """
+    fmt = fmt or next_format()
+    shape = FORMATS[fmt]
+    roles = shape["roles"]
+    print(f"  shape: {fmt} ({len(roles)} scenes)")
+
     msg = _client().messages.create(
         model=DEFAULT_CLAUDE_MODEL,
         # Generous, because max_tokens bounds thinking PLUS visible text on
@@ -198,6 +284,11 @@ def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> 
         system=SYSTEM,
         messages=[{"role": "user", "content": TEMPLATE.format(
             topic=topic, niche=pillar or NICHE, icons=", ".join(known_icons()),
+            count=len(roles), roles=", ".join(roles), brief=shape["brief"],
+            # Scaled to the shape. The eight-scene format was budgeted at
+            # 95-120 words; a seven-scene one at the same budget is a fuller
+            # scene, which is how a script starts overrunning the clock.
+            words=f"{len(roles) * 12} to {len(roles) * 15}",
             max_secs=MAX_DURATION) + (
             # Appended only on the re-ask, and it carries a real measurement
             # rather than "make it shorter" — the first attempt already had a
@@ -215,8 +306,8 @@ def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> 
 
     spec = json.loads(raw)
     scenes = spec.get("scenes") or []
-    if [s.get("role") for s in scenes] != ROLES:
-        raise ValueError(f"Script has the wrong scene roles: "
+    if [s.get("role") for s in scenes] != roles:
+        raise ValueError(f"Script has the wrong scene roles for {fmt!r}: "
                          f"{[s.get('role') for s in scenes]}")
     valid = set(known_icons())
     for s in scenes:
@@ -240,6 +331,7 @@ def write_script(topic: str, pillar: str = "", max_words: int | None = None) -> 
 
     spec["topic"] = topic
     spec["pillar"] = pillar or NICHE
+    spec["format"] = fmt
     words = sum(len(s["spoken"].split()) for s in scenes)
     print(f"  script: {len(scenes)} scenes, {words} spoken words")
     return spec

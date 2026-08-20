@@ -32,6 +32,9 @@ _P = {
     "leaf": "M11 20A7 7 0 0 1 20 4c0 9-7 12-13 12M4 20c2-4 5-6 8-7",
     "apple": "M12 7c-3-4-9-2-9 4 0 5 4 10 6.5 10 1 0 1.5-.6 2.5-.6s1.5.6 2.5.6"
              "C17 21 21 16 21 11c0-6-6-8-9-4zM12 7V3",
+    "dumbbell": "M6.5 6.5v11M3.5 9v5M17.5 6.5v11M20.5 9v5M6.5 12h11",
+    "bowl": "M3 11h18a9 9 0 0 1-18 0zM12 11V7M9.5 7.5 12 4l2.5 3.5",
+    "stairs": "M3 21h4v-4h4v-4h4V9h4V5h3M3 21v-4",
     # mind / focus
     "brain": "M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 1 5 3 3 0 0 0 4 3V3z"
              "M15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-1 5 3 3 0 0 1-4 3V3z",
@@ -80,6 +83,12 @@ ROLE_DEFAULT = {
     "tactic": "check",
     "action": "arrow",
     "follow": "star",
+    # the two newer habit shapes
+    "ghalti": "alert",
+    "sudhaar": "check",
+    "pehle": "clock",
+    "baad": "sunrise",
+    "wajah": "brain",
     # the scripture profile's roles
     "ayah": "book_open",
     "hadith": "quote",

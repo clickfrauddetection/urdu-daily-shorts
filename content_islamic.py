@@ -4,9 +4,9 @@ The day's ayah or hadith, and the words written AROUND it.
 
 The division of labour here is the whole point of the file, and it is not
 negotiable: islamic_sources.py supplies the sacred text, and the model is
-never shown a slot it could put sacred text into. Claude writes five things —
-a hook, two scenes of plain-Urdu explanation, one thing to do today, and the
-follow ask — and every one of them is checked afterwards for the language of
+never shown a slot it could put sacred text into. Claude writes four things —
+two scenes of plain-Urdu explanation, one thing to do today, and the follow
+ask — and every one of them is checked afterwards for the language of
 quotation, because "اللہ تعالیٰ فرماتے ہیں…" in a model-written line is a
 quotation the model just invented.
 
@@ -70,8 +70,8 @@ You write ONLY in Urdu script. Never Roman Urdu, never Latin letters.
 
 You are given the verse or the hadith. IT IS ALREADY ON SCREEN, it has ALREADY
 been recited, and its translation has already been read aloud — all of that
-happens before your first word. Do not repeat it, do not re-translate it, and above all do
-not quote anything else:
+happens before your first word. Do not repeat it, do not re-translate it, and
+above all do not quote anything else:
 
 - NEVER write "اللہ تعالیٰ فرماتے ہیں", "قرآن میں ہے", "حدیث میں آیا ہے",
   "نبی کریم ﷺ نے فرمایا" or any other phrase that introduces a quotation. Every

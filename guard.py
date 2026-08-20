@@ -36,6 +36,16 @@ BANNED = [
     # advice that replaces a doctor
     r"doctor ki zarurat nahi", r"ڈاکٹر کی ضرورت نہیں",
     r"no need (for|to see) a doctor",
+    # Body and weight targets. Added when the channel widened to food and
+    # exercise. A habit video may say what to DO and when; the moment it names
+    # a weight, a calorie count or a body to end up with, it is prescribing —
+    # which is both outside what anyone here is qualified to say and squarely
+    # inside both platforms' health policy.
+    r"calorie", r"کیلوری", r"kcal",
+    r"kg", r"کلو وزن", r"وزن کم", r"wazan kam", r"weight loss",
+    r"fat ?loss", r"پیٹ کم", r"belly fat", r"موٹاپا",
+    r"detox", r"ڈیٹاکس", r"keto", r"protein powder",
+    r"(دن|دنوں|ہفتے|مہینے) میں (وزن|نتیجہ|فرق) (کم|ضمانت)",
     # guarantees
     r"guarantee", r"100%", r"یقینی طور پر ٹھیک", r"hamesha ke liye theek",
 ]

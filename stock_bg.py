@@ -47,6 +47,12 @@ THEMES = {
               "mountain trail sunrise", "ocean waves slow"],
     "rishtay": ["sunset field warm", "tea cup steam", "park bench evening",
                 "warm light window"],
+    "warzish": ["park path morning", "running shoes road", "stairs sunlight",
+                "mountain trail sunrise", "empty street dawn"],
+    "khurak": ["water pouring glass", "kitchen window morning",
+               "fruit table light", "tea cup steam", "market vegetables"],
+    "usool": ["desk sunlight morning", "book pages turning", "sand timer",
+              "calm room window", "notebook pen desk"],
     # The scripture days. Naseem's call, and it is the right one for an Urdu
     # audience: green mountain country — Fairy Meadows, streams, alpine
     # valleys — rather than the desert-and-starfield look every Islamic page on

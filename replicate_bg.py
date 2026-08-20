@@ -65,6 +65,12 @@ PILLAR_PROMPT = {
                 "amber tones"),
     "sleep": ("a calm dark night scene, moonlight through a window onto an "
               "empty quiet room, deep blue tones"),
+    "warzish": ("an empty park path at sunrise, mist and long shadows, cool "
+                "morning tones, no people"),
+    "khurak": ("a simple kitchen window at morning, a glass of water on a "
+               "wooden table, warm soft light, no people"),
+    "usool": ("a quiet desk by a window at first light, a closed notebook, "
+              "warm rim light, uncluttered, no people"),
     # No mosque interiors, no calligraphy, no Arabic text of any kind in a
     # GENERATED image: an image model asked for Arabic script produces
     # letter-shaped noise, and letter-shaped noise behind an ayah is the worst

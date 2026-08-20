@@ -1,6 +1,5 @@
 {
   "_comment": "A niche is either a flat list of topics, or an object of pillar -> topics. A pillar object rotates: consecutive days come from different pillars, so a broad channel does not run five sleep videos in a row and read as a sleep channel. Filled by hand on purpose (see content.py) — a model asked daily for a topic converges within about two weeks. The pillar name also picks the background footage (stock_bg.THEMES) and the generated fallback prompt (replicate_bg.PILLAR_PROMPT), so a money topic does not open on a night sky.",
-
   "daily": {
     "neend": [
       "raat ko bistar par phone dekhne se neend kyun der se aati hai",
@@ -79,9 +78,44 @@
       "bachon se sawal poochne ka andaz",
       "naraazgi ko raat bhar na rakhna",
       "shukriya kehne ki aadat"
+    ],
+    "warzish": [
+      "roz chalne ka sab se asaan waqt kaun sa hai",
+      "gym jaye baghair jism ko harkat dene ke teen tareeqe",
+      "das minute ki walk kis waqt sab se zyada farq daalti hai",
+      "seerhiyan chadhne ki purani aadat",
+      "din bhar baithne ke darmiyan uthne ka usool",
+      "subah uth kar jism kholne ke teen sadhe kaam",
+      "warzish shuru karne ke baad chhoot kyun jaati hai",
+      "khaane ke baad chalna — kitna aur kab",
+      "kandhe aur gardan ki akadan roz kaam karne walon ke liye",
+      "hafte mein kitne din harkat asal mein zaroori hai"
+    ],
+    "khurak": [
+      "raat ka khana kis waqt tak kha lena chahiye",
+      "nashta chhodne ki aadat asal mein kya karti hai",
+      "paani peene ka waqt — subah, din aur raat",
+      "chaye ka teesra cup kis waqt bhaari padta hai",
+      "khana khate waqt phone dekhne ki aadat",
+      "bazaar ka khana hafte mein kitni baar",
+      "mithai aur chini ki talab kis waqt uthti hai",
+      "plate chhoti karne ka purana tareeqa",
+      "raat ko bhook lage to kya karein",
+      "ghar ka khana banane ka sab se asaan din"
+    ],
+    "usool": [
+      "do minute ka usool — kaam taalna kaise ruke",
+      "koi bhi cheez shuru karne se pehle ek sawaal",
+      "naa kehna seekhne ka sab se asaan jumla",
+      "din ka pehla faisla kaun sa hona chahiye",
+      "har cheez apni jagah — paanch minute ka usool",
+      "kisi se naraz hon to chobees ghante",
+      "waada kam karo, poora zyada karo",
+      "roz ek cheez phenkne ki aadat",
+      "hafte mein ek din bina khareedari",
+      "raat ko kal ka ek kaam likh lena"
     ]
   },
-
   "sleep": [
     "raat ko bistar par phone dekhne se neend kyun der se aati hai",
     "roz ek hi waqt par sona kyun sab se bara farq daalta hai",
