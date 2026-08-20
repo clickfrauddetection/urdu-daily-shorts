@@ -5,3 +5,4 @@ __pycache__/
 .env
 youtube_refresh_token.txt
 data/cache/
+data/bg_used.json

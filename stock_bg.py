@@ -14,6 +14,7 @@ returns nothing, and the video ships on a flat gradient. It picks from a fixed
 list per niche instead, every entry of which is a term stock footage actually
 exists for.
 """
+import json
 import os
 import random
 import time
@@ -146,12 +147,57 @@ def _search(query: str) -> list[dict]:
     return []
 
 
+USED_FILE = "data/bg_used.json"
+# How many clips to remember. Thirty days of one video a day is enough that a
+# viewer scrolling the page cannot see the same footage twice, and small enough
+# that the list never starves a query of candidates.
+USED_MEMORY = int(os.environ.get("BG_MEMORY") or 60)
+
+
+def _used() -> list[int]:
+    if not os.path.exists(USED_FILE):
+        return []
+    try:
+        with open(USED_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
+def remember(hit_id: int) -> None:
+    """Record a clip as used, so the next few weeks do not reuse it."""
+    ids = [i for i in _used() if i != hit_id][-(USED_MEMORY - 1):] + [hit_id]
+    os.makedirs(os.path.dirname(USED_FILE) or ".", exist_ok=True)
+    with open(USED_FILE, "w", encoding="utf-8") as f:
+        json.dump(ids, f)
+
+
 def _download(hits: list[dict], out_path: str) -> dict | None:
-    """First hit that actually downloads. Long clips first."""
+    """A hit that actually downloads — random among the good ones, not the first.
+
+    Two things were wrong with taking the first. The query list is shuffled per
+    run, so the SUBJECT varied — but Pixabay's ordering for a given query does
+    not, so a niche with six themes was really a rotation of six clips, and
+    after a fortnight the page is visibly the same handful of videos. And a
+    channel whose footage repeats is not only dull; repetitive output is what
+    both platforms' inauthentic-content rules are written about.
+
+    So: shuffle, and skip anything used in the last USED_MEMORY videos.
+    """
     # Long enough that the loop point is not obvious inside a 60-second video.
     # Anything under ~12s wraps often enough for a viewer to notice it.
     long_hits = [h for h in hits if h.get("duration", 0) >= 12]
-    for hit in long_hits + [h for h in hits if h not in long_hits]:
+    short_hits = [h for h in hits if h.get("duration", 0) < 12]
+    random.shuffle(long_hits)
+    random.shuffle(short_hits)
+
+    seen = set(_used())
+    fresh = [h for h in long_hits if h.get("id") not in seen]
+    stale = [h for h in long_hits if h.get("id") in seen]
+    # Used clips are the last resort, not a refusal: a channel that would
+    # rather have no background than a repeated one has its priorities the
+    # wrong way round.
+    for hit in fresh + short_hits + stale:
         url = _best_file(hit)
         if not url:
             continue
@@ -165,6 +211,8 @@ def _download(hits: list[dict], out_path: str) -> dict | None:
             print(f"    download failed ({type(e).__name__}) — next hit")
             continue
         if os.path.getsize(out_path) > 100_000:
+            if hit.get("id"):
+                remember(hit["id"])
             return hit
     return None
 

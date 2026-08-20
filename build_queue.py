@@ -47,35 +47,52 @@ HADEETH_CATEGORY = "5"          # فضائل و آداب
 HADEETH_PAGES = 6
 PER_PAGE = 25
 
-# Short, and about how a person lives — not about rulings, not about disputes.
+# Chosen by hand, one at a time, and NOT a walk through the mushaf. The system
+# will never "do every ayah in order": most verses need a context a
+# sixty-second video cannot carry, many are part of a passage that means
+# something different alone, and some are about law, war or a moment in history
+# where a short clip with no scholarship behind it does harm. What is here is
+# the other kind — verses about how a person lives with difficulty, with
+# people, with themselves. Well known, mostly short, and each one checked
+# against the API before it is written to the queue.
+#
+# ADD TO THIS LIST FREELY. That is the intended way to grow the channel: the
+# filter below throws out anything whose translation is too long for a Short,
+# so a bad addition costs nothing but a line of output.
 AYAT = [
-    "94:5", "94:6", "94:7", "94:8",       # with hardship comes ease
-    "2:152", "2:153", "2:186", "2:286",   # remembrance, patience, nearness
-    "3:139", "3:159", "3:200",
-    "13:11", "13:28",                     # hearts find rest
-    "14:7",                               # gratitude
-    "16:90", "16:97", "16:128",
-    "17:23", "17:24", "17:53",            # parents, good speech
-    "20:124",
-    "24:22",                              # forgive and overlook
-    "29:69",
-    "31:17", "31:18", "31:19",            # Luqman's counsel
-    "39:53",                              # do not despair
-    "41:34",                              # repel evil with what is better
-    "42:43",
-    "47:7",
-    "49:11", "49:12", "49:13",            # names, suspicion, backbiting
-    "50:16",
-    "53:39",
-    "55:60",
-    "57:20",
-    "64:11",
-    "65:2", "65:3",
-    "76:8",
-    "87:14", "87:16", "87:17",
-    "92:5", "92:6", "92:7",
-    "93:5", "93:7", "93:9", "93:10", "93:11",
-    "103:2", "103:3",
+    # with hardship comes ease
+    "94:5", "94:6", "94:7", "94:8",
+    "93:3", "93:4", "93:5", "93:6", "93:7", "93:8", "93:9", "93:10", "93:11",
+    # remembrance, patience, nearness, dua
+    "2:45", "2:152", "2:153", "2:155", "2:156", "2:186", "2:216", "2:286",
+    "3:139", "3:159", "3:160", "3:185", "3:200",
+    "8:46", "12:87", "13:11", "13:28", "14:7", "20:114", "21:83", "21:87",
+    "29:2", "29:69", "39:53", "40:60", "42:30", "47:7", "64:11", "65:2",
+    "65:3", "94:1",
+    # how a person deals with people
+    "4:36", "4:58", "4:86", "5:2", "5:8",
+    "16:90", "16:97", "16:125", "16:128",
+    "17:23", "17:24", "17:26", "17:36", "17:37", "17:53", "17:110",
+    "24:22", "25:63", "25:72", "25:74",
+    "28:77", "30:21", "31:17", "31:18", "31:19",
+    "41:34", "42:37", "42:38", "42:43", "49:6", "49:10", "49:11", "49:12",
+    "49:13", "58:11", "59:9",
+    # what a person owes their own self
+    "2:110", "2:261", "2:268", "2:277", "3:92", "3:110", "3:134",
+    "6:162", "7:31", "7:55", "7:56", "7:199", "9:105", "9:119",
+    "10:57", "11:6", "11:114", "18:23", "18:24", "18:46", "18:110",
+    "20:124", "23:1", "23:2", "23:3", "26:80", "27:62",
+    "29:45", "29:64", "31:16", "32:16", "33:21", "33:41", "33:70", "33:71",
+    "35:5", "35:15", "36:82", "39:9", "39:10", "43:32", "45:13",
+    "51:56", "53:31", "53:38", "53:39", "55:13", "55:60",
+    "57:4", "57:16", "57:20", "59:18", "61:2", "61:3", "62:10", "63:9",
+    "64:15", "64:16", "65:7", "66:6", "67:2", "67:15", "68:4",
+    "76:3", "76:8", "79:40", "79:41",
+    "87:14", "87:16", "87:17", "89:27", "89:28", "89:29", "89:30",
+    "90:4", "91:9", "91:10", "92:5", "92:6", "92:7",
+    "95:4", "96:1", "99:7", "99:8", "100:6", "102:1", "102:2",
+    "103:1", "103:2", "103:3", "104:1", "107:4", "107:5", "107:6", "107:7",
+    "109:6", "110:3", "112:1", "112:2", "112:3", "112:4",
 ]
 
 
