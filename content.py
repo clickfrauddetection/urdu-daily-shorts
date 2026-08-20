@@ -24,8 +24,8 @@ import anthropic
 
 import urdu
 from config import (
-    ANTHROPIC_API_KEY, DEFAULT_CLAUDE_MODEL, NICHE, TOPICS_FILE, LOG_FILE,
-    MAX_DURATION,
+    ANTHROPIC_API_KEY, DEFAULT_CLAUDE_MODEL, WRITER_EFFORT, NICHE,
+    TOPICS_FILE, LOG_FILE, MAX_DURATION,
 )
 from icons import known as known_icons
 
@@ -277,6 +277,7 @@ def write_script(topic: str, pillar: str = "", max_words: int | None = None,
 
     msg = _client().messages.create(
         model=DEFAULT_CLAUDE_MODEL,
+        output_config={"effort": WRITER_EFFORT},
         # Generous, because max_tokens bounds thinking PLUS visible text on
         # current models — the sibling repo's 2200 truncated the JSON
         # mid-object and surfaced as a JSONDecodeError, not as a budget error.

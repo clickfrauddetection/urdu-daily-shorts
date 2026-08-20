@@ -70,6 +70,24 @@ YOUTUBE_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN", "")
 # rather than degrading, and it has taken those repos down for days at a time.
 DEFAULT_CLAUDE_MODEL = os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5"
 
+# How hard the model is allowed to think. "high" is the API's own default and
+# what this repo ships with; the knob exists so the alternative can be TRIED
+# rather than argued about — WRITER_EFFORT=medium on one dispatch run, then
+# watch the video.
+#
+# Named WRITER_EFFORT, not CLAUDE_EFFORT: the latter is already set to "low" in
+# at least one of our own shells for an unrelated tool, and a repo that silently
+# reads someone else's variable is a bug waiting for the day nobody remembers
+# why the writing got worse.
+#
+# Do not lower this to save money without watching the result first. The
+# saving over three months is a few dollars, and what is being traded for it is
+# the writing: the hook that has two seconds to stop a scroll, and — on a
+# scripture day — reading an Arabic tafsir and rendering it into simple Urdu
+# without adding a meaning to it. Neither is a simple task, and "low" is meant
+# for simple tasks.
+WRITER_EFFORT = (os.environ.get("WRITER_EFFORT") or "high").lower()
+
 # ------------------------------------------------------------ islamic sources
 # See islamic_sources.py. Both endpoints are keyless; what is configurable here
 # is WHICH translation and WHICH reciter, because those are editorial choices a

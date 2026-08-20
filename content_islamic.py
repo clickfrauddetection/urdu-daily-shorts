@@ -55,7 +55,7 @@ import os
 import islamic_sources as sources
 import urdu
 from config import (
-    DEFAULT_CLAUDE_MODEL, ISLAMIC_QUEUE_FILE, LOG_FILE, CHANNEL_NAME,
+    DEFAULT_CLAUDE_MODEL, WRITER_EFFORT, ISLAMIC_QUEUE_FILE, LOG_FILE, CHANNEL_NAME,
     TARJUMA_AUDIO,
 )
 from content import ask, _client
@@ -258,6 +258,7 @@ def _written(item: dict) -> dict:
 
     msg = _client().messages.create(
         model=DEFAULT_CLAUDE_MODEL,
+        output_config={"effort": WRITER_EFFORT},
         # Generous for the same reason as content.write_script: max_tokens
         # bounds thinking plus visible text, and a truncated object surfaces
         # as a JSONDecodeError rather than as a budget error.
