@@ -26,8 +26,9 @@ was the one place the model was reading scripture on its own.
                     rendered, so a bug that lets model text into a verbatim
                     slot fails the build instead of publishing.
 
-Shape, six scenes:
+Shape, seven scenes:
 
+    hook       written    two seconds of Urdu, before anything else
     ayah       verbatim   the Arabic, on screen, in the qari's own voice
     tarjuma    verbatim   the Urdu translation, read aloud, with the reference
     tashreeh   written    what it means, in the Urdu people speak
@@ -35,14 +36,13 @@ Shape, six scenes:
     amal       written    one thing to do today
     follow     written    the ask
 
-There is no written hook. The video OPENS on the recitation — Naseem's call,
-and it costs something worth naming: the first two seconds are what a scroll
-decides on, and a hook written for exactly those two seconds is the standard
-way to buy them. What it buys instead is that the first thing anyone hears is a
-qari and the first thing they see is the ayah, with nothing of ours in front of
-it. On this channel that is the better trade, and the recitation is a stronger
-opening than most hooks anyway: it is recognisable in half a second, which is
-about as fast as a hook can work.
+The hook is back at the front, and this one was settled by data rather than by
+argument. It was removed on the reasoning that opening on the recitation is
+purer and that a qari is recognisable in half a second — which is true, and
+which lost to the fact that the videos WITH an Urdu hook in front were the ones
+performing. Two seconds of Urdu that names the moment a person is in earns the
+next fifty; a viewer who scrolls past the ayah never hears it either way. The
+recitation still opens the SOUND — the hook plays over silence.
 
 For a hadith the second scene carries the Arabic matn with the narration line
 read over it, since a TTS voice trained on Urdu reading classical Arabic is
@@ -60,7 +60,8 @@ from config import (
 )
 from content import ask, _client
 
-QURAN_ROLES = ["ayah", "tarjuma", "tashreeh", "tashreeh", "amal", "follow"]
+QURAN_ROLES = ["hook", "ayah", "tarjuma", "tashreeh", "tashreeh",
+               "amal", "follow"]
 
 SYSTEM = f"""You write short Urdu scripts for a daily Islamic video channel
 called "{CHANNEL_NAME}". One ayah or one hadith a day, quoted from a published
@@ -105,6 +106,15 @@ raise. If it is short, say less rather than filling the gap yourself:
 
 Write, in Urdu script:
 
+- "hook": the first words on screen, BEFORE the recitation, read in silence.
+  Maximum 6 words, <em></em> on the one word that carries it. It must NOT
+  announce the video ("آج ہم جانیں گے", "سنیے", "آئیے سمجھتے ہیں" — all banned)
+  and it must NOT paraphrase the verse — the verse is two seconds away and says
+  it better. Name the MOMENT a person needs this verse in: the feeling, the
+  hour, the situation. Someone in that moment should feel it was written for
+  them.
+- "hook_spoken": leave this EMPTY (""). The hook is read, not heard — nothing is
+  spoken over it, so that the first sound in the video is the recitation.
 - "tashreeh": exactly TWO scenes. Each has a "headline" of at most 6 words for
   the screen, with <em></em> on one word, and "spoken" of 14 to 22 words. The
   first says what the verse means, following the tafsir above. The second says
@@ -127,7 +137,7 @@ about two words a second, and the recitation and the translation take the rest
 of the minute — they are not yours to cut.
 
 Respond with ONLY this JSON:
-{{"title":"...","caption":"...",
+{{"title":"...","caption":"...","hook":"...","hook_spoken":"",
   "tashreeh":[{{"headline":"...","spoken":"..."}},
               {{"headline":"...","spoken":"..."}}],
   "amal":{{"headline":"...","spoken":"..."}},
@@ -148,6 +158,10 @@ Points the source itself draws from it:
 
 Write, in Urdu script:
 
+- "hook": the first words on screen, before the Arabic, read in silence.
+  Maximum 6 words, <em></em> on one word. No announcing the video, and no
+  paraphrasing the hadith. Name the situation it speaks to.
+- "hook_spoken": leave this EMPTY ("").
 - "tashreeh": exactly TWO scenes, each {{"headline": at most 6 words with
   <em></em> on one word, "spoken": 14 to 22 words}}. Stay inside the published
   explanation above. Do not add a point it does not make.
@@ -160,7 +174,7 @@ Write, in Urdu script:
 Total spoken words across everything you write: 60 to 80.
 
 Respond with ONLY this JSON:
-{{"title":"...","caption":"...",
+{{"title":"...","caption":"...","hook":"...","hook_spoken":"",
   "tashreeh":[{{"headline":"...","spoken":"..."}},
               {{"headline":"...","spoken":"..."}}],
   "amal":{{"headline":"...","spoken":"..."}},
@@ -271,7 +285,7 @@ def _written(item: dict) -> dict:
             raw = raw[4:].strip()
     spec = json.loads(raw)
 
-    for key in ("amal", "follow"):
+    for key in ("hook", "amal", "follow"):
         if not spec.get(key):
             raise ValueError(f"The writer left out {key!r}")
     if len(spec.get("tashreeh") or []) != 2:
@@ -289,7 +303,10 @@ def build_spec(entry: dict, pillar: str = "") -> dict:
         return dict({"role": role, "headline": headline, "spoken": spoken,
                      "icon": None}, **extra)
 
-    scenes = []
+    # The hook holds in silence — no narration over it, so the first sound the
+    # video makes is the qari. Its length comes from SILENT_HOOK_SECONDS in
+    # main.py rather than from a voice clip.
+    scenes = [scene("hook", written["hook"], "")]
 
     if item["kind"] == "quran":
         scenes.append(scene(

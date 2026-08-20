@@ -66,6 +66,12 @@ KINDS = {
 # the video has frozen.
 SILENT_AYAH_SECONDS = float(os.environ.get("SILENT_AYAH_SECONDS") or 4.5)
 
+# The hook holds in silence so the first SOUND of the video is the recitation.
+# Two seconds is what a scroll takes to decide, and it is also about as long as
+# six words of Nastaliq need to be read — any longer and the video has a gap in
+# it before it has earned one.
+SILENT_HOOK_SECONDS = float(os.environ.get("SILENT_HOOK_SECONDS") or 2.2)
+
 
 def _published() -> int:
     """How many videos this channel has actually posted.
@@ -214,7 +220,9 @@ def _narrate_all(scenes: list[dict], name: str, tag: str = "",
             step("  recorded translation unavailable — the narrator reads it")
 
         if not (scene.get("spoken") or "").strip():
-            out.append({"audio_path": None, "duration": SILENT_AYAH_SECONDS,
+            held = (SILENT_HOOK_SECONDS if scene["role"] == "hook"
+                    else SILENT_AYAH_SECONDS)
+            out.append({"audio_path": None, "duration": held,
                         "words": [], "engine": "silent"})
             continue
         out.append(voice_urdu.narrate(scene["spoken"], f"{name}{tag}_s{i}"))
