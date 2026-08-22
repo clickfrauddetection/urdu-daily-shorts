@@ -300,8 +300,12 @@ def build_spec(entry: dict, pillar: str = "") -> dict:
     written = _written(item)
 
     def scene(role, headline, spoken, **extra):
+        # profile travels with the scene so the shared habit template can tell
+        # the two channels apart. Without it a hook on an ayah inherits the
+        # wellness channel's hazard triangle, which is how a verse about ease
+        # after hardship went out with a danger sign over it.
         return dict({"role": role, "headline": headline, "spoken": spoken,
-                     "icon": None}, **extra)
+                     "icon": None, "profile": "scripture"}, **extra)
 
     # The hook holds in silence — no narration over it, so the first sound the
     # video makes is the qari. Its length comes from SILENT_HOOK_SECONDS in

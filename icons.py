@@ -97,6 +97,35 @@ ROLE_DEFAULT = {
     "amal": "hands",
 }
 
+# The scripture channel shares the habit channel's roles for everything that is
+# not verbatim — hook, tashreeh, amal, follow all render through the same
+# template. That is fine until the ICON comes along: "hook" defaults to the
+# hazard triangle, which is right above a symptom on a sleep video and badly
+# wrong above an ayah about ease after hardship. The verse that carried this
+# channel's only engaging video opened with a danger sign.
+#
+# Only the roles that need to differ are listed. Anything absent falls through
+# to ROLE_DEFAULT, so the scripture profile does not have to restate the roles
+# that were already right.
+SCRIPTURE_DEFAULT = {
+    # No icon at all. The hook is six words of Nastaliq holding in silence
+    # before the qari begins, and a badge above it is one more thing competing
+    # with the only thing on screen.
+    "hook": None,
+    "follow": "star",
+}
+
+
+def default_for(role: str, profile: str = "") -> str | None:
+    """The icon a role gets when the writer names none.
+
+    profile picks the map; an unknown profile is the habit one, which is the
+    behaviour every existing caller already had.
+    """
+    if profile == "scripture" and role in SCRIPTURE_DEFAULT:
+        return SCRIPTURE_DEFAULT[role]
+    return ROLE_DEFAULT.get(role)
+
 
 def icon(name: str, size: int = 96) -> str:
     """Return an inline <svg> for `name`. Unknown names raise, on purpose."""

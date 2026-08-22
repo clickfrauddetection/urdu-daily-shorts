@@ -24,7 +24,7 @@ from config import (
     WIDTH, HEIGHT, PALETTE, SAFE_TOP, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT,
     FONT_DIR, CHANNEL_NAME_UR,
 )
-from icons import icon, ROLE_DEFAULT
+from icons import icon, default_for
 
 
 # Ported from the reels repo. Captions cap at two lines and the headline at
@@ -93,7 +93,15 @@ def _words_html(words: list, lead: float) -> str:
 def render_scene(scene: dict, duration: float, lead: float,
                  index: int, total: int) -> str:
     """`scene` needs: role, headline, words. `icon` is optional."""
-    name = scene.get("icon") or ROLE_DEFAULT[scene["role"]]
+    # The profile decides, because the same role means different things on the
+    # two channels: a hook on a sleep video is a symptom and gets the hazard
+    # triangle, a hook on an ayah is not and must not.
+    name = scene.get("icon") or default_for(scene["role"], scene.get("profile", ""))
+    # A role can ask for no badge at all, and then the frame gets none rather
+    # than an empty circle where one used to be.
+    icon_block = (f'<div class="ic-wrap"><div class="ic-float">'
+                  f'{icon(name, 110)}</div></div>') if name else ""
+
     p = PALETTE
     # The hook scene gets the accent; tactic scenes get the green so a viewer
     # can tell "here is the problem" from "here is what to do" without reading.
@@ -289,7 +297,7 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
              for i in range(total))}
   </div>
   <div class="top">
-    <div class="ic-wrap"><div class="ic-float">{icon(name, 110)}</div></div>
+    {icon_block}
     <div class="h">{scene["headline"]}</div>
   </div>
   <div class="cap"><div class="cap-box">{
