@@ -63,6 +63,65 @@ from content import ask, _client
 QURAN_ROLES = ["hook", "ayah", "tarjuma", "tashreeh", "tashreeh",
                "amal", "follow"]
 
+# ── shapes ───────────────────────────────────────────────────────────────────
+# One shape forever is how a feed learns it has already seen an account. The
+# habit side grew three; this side had one — and this is the side that works.
+#
+# Which one is not a free choice: the verse decides. Eighteen of the queue's
+# verses were fetched and measured rather than guessed at — the Arabic runs 28
+# to 114 characters, median 64. The queue file's own _ur previews are capped at
+# 60 and are no use for this; only the fetched text is.
+#
+# 80 puts roughly a third of verses on the long branch. That is the number that
+# was being chosen here, so it is worth saying what it is for: not "it will not
+# fit" — the renderer gives Arabic five lines and most verses need two — but
+# pacing. A long verse plus a hook plus two explanations spends the whole Short
+# before the explanation lands, and a third of videos opening straight on the
+# qari is the variety this channel is short of.
+ARABIC_LONG_CHARS = int(os.environ.get("ARABIC_LONG_CHARS") or 80)
+
+SHAPES = {
+    # The one that worked. Hook held in silence, then the recitation.
+    "full": ["hook", "ayah", "tarjuma", "tashreeh", "tashreeh",
+             "amal", "follow"],
+    # For a long verse. No hook at all — the qari opens the video, which is
+    # also the strongest first second this channel has, and only one
+    # explanation follows because the verse has already used the room.
+    "recitation_first": ["ayah", "tarjuma", "tashreeh", "amal", "follow"],
+    # No Arabic frame. The translation carries it with the reference beneath:
+    # a different video to look at, and the shortest of the three.
+    "tarjuma_only": ["hook", "tarjuma", "tashreeh", "tashreeh",
+                     "amal", "follow"],
+}
+
+# What a SHORT verse alternates between. recitation_first is absent on purpose:
+# it is chosen by length and never by rotation, because opening on a four-word
+# ayah puts the strongest frame on screen before anyone has registered it.
+SHORT_ROTATION = ["full", "tarjuma_only"]
+
+
+def next_shape(item: dict) -> str:
+    """Which shape today's verse takes.
+
+    SCRIPTURE_SHAPE pins it for one run, so a shape can be rehearsed without
+    waiting for a verse of the right length to come round.
+    """
+    forced = os.environ.get("SCRIPTURE_SHAPE")
+    if forced:
+        if forced not in SHAPES:
+            raise ValueError(f"No shape named {forced!r}. Have: "
+                             + ", ".join(SHAPES))
+        return forced
+
+    if len((item.get("arabic") or "").strip()) > ARABIC_LONG_CHARS:
+        return "recitation_first"
+
+    # Counted the way the habit rotation counts: on posts, not dates, so a
+    # morning that failed does not advance it.
+    posted = len([e for e in _posted()
+                  if e.get("results") and e.get("kind") == "scripture"])
+    return SHORT_ROTATION[posted % len(SHORT_ROTATION)]
+
 SYSTEM = f"""You write short Urdu scripts for a daily Islamic video channel
 called "{CHANNEL_NAME}". One ayah or one hadith a day, quoted from a published
 source, with a short explanation in the Urdu people actually speak.
@@ -307,21 +366,36 @@ def build_spec(entry: dict, pillar: str = "") -> dict:
         return dict({"role": role, "headline": headline, "spoken": spoken,
                      "icon": None, "profile": "scripture"}, **extra)
 
+    # A hadith keeps the single shape. Not for want of trying: its Arabic
+    # arrives with an isnad attached, so the length of the string says nothing
+    # about how long the matn is, and the rule that sizes a verse has nothing
+    # to read here.
+    if item["kind"] == "quran":
+        shape = next_shape(item)
+        print(f"  shape: {shape}  "
+              f"({len(item.get('arabic') or '')} chars of Arabic)")
+    else:
+        shape = "full"
+    roles = SHAPES[shape]
+
+    scenes = []
     # The hook holds in silence — no narration over it, so the first sound the
     # video makes is the qari. Its length comes from SILENT_HOOK_SECONDS in
     # main.py rather than from a voice clip.
-    scenes = [scene("hook", written["hook"], "")]
+    if "hook" in roles:
+        scenes.append(scene("hook", written["hook"], ""))
 
     if item["kind"] == "quran":
-        scenes.append(scene(
-            "ayah", item["arabic"], "",
-            verbatim=True,
-            # No TTS on this scene at all. The audio is the qari's, downloaded
-            # by islamic_sources.recitation(), and a scene with no recitation
-            # available is handled in main.py rather than read aloud by a
-            # synthetic Urdu voice.
-            recite=True, arabic=True,
-            citation=item["citation"]))
+        if "ayah" in roles:
+            scenes.append(scene(
+                "ayah", item["arabic"], "",
+                verbatim=True,
+                # No TTS on this scene at all. The audio is the qari's,
+                # downloaded by islamic_sources.recitation(), and a scene with
+                # no recitation available is handled in main.py rather than
+                # read aloud by a synthetic Urdu voice.
+                recite=True, arabic=True,
+                citation=item["citation"]))
         scenes.append(scene(
             "tarjuma", item["citation"], item["urdu"],
             verbatim=True, body=item["urdu"],
@@ -345,7 +419,10 @@ def build_spec(entry: dict, pillar: str = "") -> dict:
                 "hadith", item["arabic"], item["urdu"],
                 verbatim=True, arabic=True, citation=item["citation"]))
 
-    for t in written["tashreeh"]:
+    # However many the shape asks for. The writer always returns two, and the
+    # shape that shows one keeps the first — they are written in order, the
+    # general meaning before the lived example.
+    for t in written["tashreeh"][:roles.count("tashreeh")]:
         scenes.append(scene("tashreeh", t["headline"], t["spoken"]))
     scenes.append(scene("amal", written["amal"]["headline"],
                         written["amal"]["spoken"]))
