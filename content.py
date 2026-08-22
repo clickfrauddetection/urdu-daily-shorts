@@ -160,11 +160,6 @@ def ask(system: str, user: str, max_tokens: int = 2000) -> str:
     Shared with content_islamic.py and handed to urdu.repair(), so the
     transliteration pass does not need its own client or its own key handling.
     """
-    fmt = fmt or next_format()
-    shape = FORMATS[fmt]
-    roles = shape["roles"]
-    print(f"  shape: {fmt} ({len(roles)} scenes)")
-
     msg = _client().messages.create(
         model=DEFAULT_CLAUDE_MODEL, max_tokens=max_tokens,
         system=system, messages=[{"role": "user", "content": user}])
