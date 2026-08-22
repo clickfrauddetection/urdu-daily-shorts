@@ -17,6 +17,7 @@ exists for.
 import json
 import os
 import random
+import subprocess
 import time
 
 import requests
@@ -104,6 +105,79 @@ def _candidates(niche: str) -> list[str]:
     return themes + LAST_RESORT
 
 
+# Mean luma, 0-255, under which a clip is treated as night footage. A normally
+# exposed daylight frame sits near 110-140; the dusk forest that carried the
+# channel's only engaging video measured 46 on the hook frame and 32 on the
+# ayah, AFTER the scrim — so the source was already dim before anything was
+# laid over it.
+#
+# 90 is a floor rather than a target: it drops night and heavy-dusk clips and
+# keeps everything an overcast afternoon produces. Raise it for brighter
+# footage, at the cost of a smaller pool to shuffle.
+MIN_BRIGHTNESS = float(os.environ.get("BG_MIN_BRIGHTNESS") or 90)
+
+
+def _thumb_url(hit: dict) -> str | None:
+    videos = hit.get("videos", {})
+    for size in ("medium", "small", "large", "tiny"):
+        url = videos.get(size, {}).get("thumbnail")
+        if url:
+            return url
+    return None
+
+
+def _brightness(hit: dict) -> float | None:
+    """Mean luma of a hit's thumbnail, or None if it cannot be measured.
+
+    The thumbnail rather than the clip: a few kilobytes against tens of
+    megabytes, and for "is this footage shot at night" it is the same answer.
+    ffmpeg does the decoding because it is already a hard dependency here and
+    an image library is not.
+    """
+    url = _thumb_url(hit)
+    if not url:
+        return None
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        proc = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", "pipe:0",
+             "-vf", "scale=32:32", "-pix_fmt", "gray",
+             "-f", "rawvideo", "pipe:1"],
+            input=r.content, capture_output=True, timeout=30)
+    except Exception:
+        return None
+    data = proc.stdout[:32 * 32]
+    if proc.returncode or not data:
+        return None
+    return sum(data) / len(data)
+
+
+def _daylight(hits: list[dict]) -> list[dict]:
+    """The hits bright enough to read type over, or all of them.
+
+    Never returns empty from a non-empty input. Losing the background entirely
+    because every candidate was dim is a worse outcome than a dim background.
+    """
+    if not hits:
+        return hits
+    lit, dark, unknown = [], [], []
+    for h in hits:
+        b = _brightness(h)
+        if b is None:
+            unknown.append(h)
+        elif b >= MIN_BRIGHTNESS:
+            lit.append(h)
+        else:
+            dark.append(h)
+    print(f"    brightness: {len(lit)} bright, {len(dark)} too dark, "
+          f"{len(unknown)} unmeasured (floor {MIN_BRIGHTNESS:g})")
+    # Unmeasured ones ride with the bright: a thumbnail that would not download
+    # says nothing about the clip, and refusing it would quietly shrink the
+    # pool every time Pixabay is slow.
+    return (lit + unknown) or dark
+
+
 def _best_file(hit: dict) -> str | None:
     videos = hit.get("videos", {})
     for size in SIZE_PREFERENCE:
@@ -186,6 +260,11 @@ def _download(hits: list[dict], out_path: str) -> dict | None:
     """
     # Long enough that the loop point is not obvious inside a 60-second video.
     # Anything under ~12s wraps often enough for a viewer to notice it.
+    # Dropped before anything else, so the shuffle below still shuffles — the
+    # brightest hit is not simply chosen every time, which would put one clip
+    # behind every video that ever used this query.
+    hits = _daylight(hits)
+
     long_hits = [h for h in hits if h.get("duration", 0) >= 12]
     short_hits = [h for h in hits if h.get("duration", 0) < 12]
     random.shuffle(long_hits)
