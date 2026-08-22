@@ -104,12 +104,18 @@ def _published() -> int:
 
 
 def _kind_for_today(override: str | None = None) -> str:
-    """Scripture or habit — the one decision that makes this two channels in one."""
+    """Which of the two daily slots this run is standing in for.
+
+    Only reached on a manual run that chose nothing: the schedule picks by the
+    clock, in the workflow. It alternates scripture and text because those are
+    the two kinds actually on the calendar — habit is still in KINDS and still
+    buildable by name, it is simply no longer part of the rotation.
+    """
     if override:
         return override
     if CONTENT_KIND in KINDS:
         return CONTENT_KIND
-    return "scripture" if _published() % 2 else "habit"
+    return "scripture" if _published() % 2 else "text"
 
 
 _T0 = time.monotonic()

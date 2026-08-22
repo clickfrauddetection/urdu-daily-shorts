@@ -5,7 +5,16 @@ on:
     # TWO videos a day, at fixed slots, in Pakistan time (UTC+5):
     #
     #   01:00 UTC = 06:00 PKT   the ayah or the hadith
-    #   13:00 UTC = 18:00 PKT   Sakoon Zindagi
+    #   13:00 UTC = 18:00 PKT   the silent text card
+    #
+    # The evening slot was the habit video until 2026-08-22. It was the most
+    # expensive thing this repo made — eight scenes, eight TTS calls — and on a
+    # page whose only engaging post was a verse it had returned nothing. The
+    # text card keeps the properties the morning slot gets right (short, quiet,
+    # worth screenshotting) and costs no TTS at all.
+    #
+    # habit is not deleted, only unscheduled: it is still in KINDS and still in
+    # the dropdown below, so putting it back is changing one word here.
     #
     # Which one runs is decided by the CLOCK, not by the alternation — see the
     # "Pick today's kind" step. A channel that posts the same kind of thing at
@@ -79,7 +88,7 @@ jobs:
         run: |
           case "${{ github.event.schedule }}" in
             "0 1 * * *")  KIND=scripture ;;
-            "0 13 * * *") KIND=habit ;;
+            "0 13 * * *") KIND=text ;;
             *)            KIND="${{ github.event.inputs.kind }}" ;;
           esac
           echo "kind=$KIND" >> "$GITHUB_OUTPUT"
