@@ -24,7 +24,7 @@ on:
       kind:
         description: "Force today's kind instead of alternating"
         type: choice
-        options: ["", "habit", "scripture"]
+        options: ["", "habit", "scripture", "text"]
         default: ""
       dry_run:
         description: "Build only, publish nothing"

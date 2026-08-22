@@ -34,10 +34,12 @@ from renderer import render_layer, probe_fonts
 # Both writers, both guards, both frames — loaded, not chosen, because the
 # choice is made per RUN rather than per repo. See _kind_for_today().
 import content_islamic
+import content_text
 import guard_islamic
 import islamic_sources
 from templates import scene as scene_habit
 from templates import scene_islamic as scene_scripture
+from templates import scene_text
 
 # What a scripture day looks like next to a habit day. Everything that differs
 # between the two kinds of video is in this table and nowhere else, which is
@@ -58,6 +60,16 @@ KINDS = {
         # Never "bed". See assembler's policy note: nothing melodic goes under
         # a recitation, and the recitation's own window is silenced outright.
         "music": "ambient",
+    },
+    "text": {
+        # No narrator at all — see content_text.py. The music is the only
+        # audio, so it is a bed rather than ambience: with nothing over it,
+        # ambience is indistinguishable from a video whose sound is broken.
+        "writer": content_text,
+        "guard": guard,
+        "render_scene": scene_text.render_scene,
+        "fits_for": scene_text.fits_for,
+        "music": "bed",
     },
 }
 
@@ -220,8 +232,12 @@ def _narrate_all(scenes: list[dict], name: str, tag: str = "",
             step("  recorded translation unavailable — the narrator reads it")
 
         if not (scene.get("spoken") or "").strip():
-            held = (SILENT_HOOK_SECONDS if scene["role"] == "hook"
-                    else SILENT_AYAH_SECONDS)
+            # A scene can name its own hold. The silent text card is one
+            # unbroken scroll whose length comes from how much there is to
+            # read, not from a constant that was chosen for an ayah frame.
+            held = scene.get("hold") or (
+                SILENT_HOOK_SECONDS if scene["role"] == "hook"
+                else SILENT_AYAH_SECONDS)
             out.append({"audio_path": None, "duration": held,
                         "words": [], "engine": "silent"})
             continue
@@ -372,7 +388,14 @@ def main() -> int:
         else:
             topic, pillar = content.next_topic()
         step(f"Topic: {topic}   [{pillar}]")
-        spec = content.write_script(topic, pillar)
+        # The habit and text kinds draw from the same topic queue — the
+        # subjects are the same, only the shape of the video differs — but
+        # they build a spec differently, so the writer comes off the kind
+        # rather than being hardcoded to content.
+        if kind == "text":
+            spec = content_text.build_spec(topic, pillar)
+        else:
+            spec = content.write_script(topic, pillar)
     plan_of["guard"].check(spec)
 
     name = f"{kind}_{datetime.now().strftime('%Y%m%d')}"
