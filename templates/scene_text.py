@@ -48,6 +48,50 @@ def fits_for(scene: dict) -> list[tuple[str, int, int]]:
     return FITS
 
 
+def _words(line: str) -> list[str]:
+    """A line split into words, with any <em>word</em> kept whole.
+
+    The writer is told to mark exactly one word, so an <em> never spans a
+    space in practice — but splitting on whitespace alone would still tear the
+    tags apart the day it does, and a half-open tag takes the rest of the card
+    with it.
+    """
+    out, buf, depth = [], [], 0
+    for tok in line.split():
+        depth += tok.count("<em>") - tok.count("</em>")
+        buf.append(tok)
+        if depth <= 0:
+            out.append(" ".join(buf))
+            buf, depth = [], 0
+    if buf:
+        out.append(" ".join(buf))
+    return out
+
+
+def _lit_html(lines: list[str], start: float, span: float) -> str:
+    """The lines as word spans, timed to be read across `span` seconds.
+
+    The pace comes from the card's own clock rather than a words-per-minute
+    constant: however many words there are, the last one lights just before
+    the card ends. A long card is read slowly and a short one briskly, which
+    is what a person does anyway.
+    """
+    per_line = [_words(ln) for ln in lines]
+    total = sum(len(w) for w in per_line) or 1
+    step = span / total
+
+    html, i = [], 0
+    for words in per_line:
+        spans = []
+        for w in words:
+            spans.append(
+                f'<span class="w" style="animation-delay:'
+                f'{start + i * step:.3f}s">{w}</span>')
+            i += 1
+        html.append('<div class="ln">' + " ".join(spans) + "</div>")
+    return "".join(html)
+
+
 def render_scene(scene: dict, duration: float, lead: float,
                  index: int, total: int) -> str:
     """One silent card. `scene` needs: lines. duration drives the scroll."""
@@ -70,10 +114,9 @@ def render_scene(scene: dict, duration: float, lead: float,
     settle = 0.25
     travel = max(duration - settle - 0.6, 1.0)
 
-    body = "".join(
-        f'<div class="ln" style="animation-delay:{settle + i * 0.10:.2f}s">'
-        f'{ln}</div>'
-        for i, ln in enumerate(lines))
+    # The sweep finishes a beat before the card does, so the last word is lit
+    # and readable rather than lighting as the video cuts.
+    body = _lit_html(lines, settle, max(travel - 0.8, 1.0))
 
     return f"""<!doctype html><meta charset="utf-8">
 <style>
@@ -135,13 +178,28 @@ body {{ direction:rtl; color:{p["ink"]};
   /* Nastaliq's descenders hang far below the baseline and the line under them
      is what clips them. This is the number that always needs raising. */
   padding-bottom:10px;
-  text-shadow:0 3px 20px rgba(0,0,0,.75), 0 1px 4px rgba(0,0,0,.9);
-  opacity:0; animation:appear .7s ease forwards; }}
+  text-shadow:0 3px 20px rgba(0,0,0,.75), 0 1px 4px rgba(0,0,0,.9); }}
 
-@keyframes appear {{ to {{ opacity:1; }} }}
+/* Each word starts dim and comes up as the sweep reaches it, so the eye is led
+   along the card the way it is when somebody reads to you. It stays up
+   afterwards — the line fills rather than flashing one word at a time, and a
+   viewer who arrives late still sees everything already read.
 
-/* The one emphasised word, in the channel's gold. The writer is told to use it
-   once in the whole card — more than one and none of them is emphasis. */
+   Both properties animate on the WORD, which is what lets the gold below come
+   along for the ride without a second animation and a second delay to keep in
+   sync with this one. */
+.w {{ display:inline-block; color:{p["muted"]}; opacity:.55;
+  animation:lit .45s ease forwards; }}
+
+@keyframes lit {{ to {{ color:{p["ink"]}; opacity:1; }} }}
+
+/* The one emphasised word, in the channel's gold — and it OUTRANKS the sweep.
+   If every word turned gold in its turn then nothing on the card would be
+   emphasised, which throws away the only emphasis this format has. The sweep
+   gives the pace; the gold stays the thing worth remembering.
+   Only the colour is pinned here: the opacity still comes from the word
+   around it, so the gold is dim before its turn and full after, in step with
+   everything else. */
 em {{ font-style:normal; color:{p["accent"]}; }}
 </style>
 <div class="scrim"></div>
