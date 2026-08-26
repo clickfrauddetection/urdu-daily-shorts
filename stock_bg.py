@@ -153,16 +153,32 @@ def _brightness(hit: dict) -> float | None:
     return sum(data) / len(data)
 
 
+# How many bright hits are enough to stop looking. The pool exists to be
+# shuffled, and a dozen candidates shuffle as well as thirty — while thirty
+# measurements is thirty HTTP requests and thirty ffmpeg processes, per query,
+# on every run.
+ENOUGH_BRIGHT = int(os.environ.get("BG_ENOUGH_BRIGHT") or 8)
+
+
 def _daylight(hits: list[dict]) -> list[dict]:
-    """The hits bright enough to read type over, or all of them.
+    """The hits bright enough to read type over, or the best that is left.
+
+    Measures lazily: it stops as soon as it has ENOUGH_BRIGHT, because Pixabay
+    returns thirty hits and measuring all of them costs a minute of wall clock
+    to choose one background.
 
     Never returns empty from a non-empty input. Losing the background entirely
     because every candidate was dim is a worse outcome than a dim background.
     """
     if not hits:
         return hits
+
     lit, dark, unknown = [], [], []
+    seen = 0
     for h in hits:
+        if len(lit) >= ENOUGH_BRIGHT:
+            break
+        seen += 1
         b = _brightness(h)
         if b is None:
             unknown.append(h)
@@ -170,12 +186,18 @@ def _daylight(hits: list[dict]) -> list[dict]:
             lit.append(h)
         else:
             dark.append(h)
+
+    rest = hits[seen:]
     print(f"    brightness: {len(lit)} bright, {len(dark)} too dark, "
-          f"{len(unknown)} unmeasured (floor {MIN_BRIGHTNESS:g})")
-    # Unmeasured ones ride with the bright: a thumbnail that would not download
-    # says nothing about the clip, and refusing it would quietly shrink the
-    # pool every time Pixabay is slow.
-    return (lit + unknown) or dark
+          f"{len(unknown)} unmeasured, {len(rest)} not looked at "
+          f"(floor {MIN_BRIGHTNESS:g})")
+
+    # Order of preference, and it matters. An unmeasured hit is NOT as good as
+    # one known to be bright — letting the two share a pool means a thumbnail
+    # Pixabay was slow to serve can win the shuffle over a clip that was
+    # actually checked. So: the bright ones alone if there are any, then the
+    # ones nothing is known about, and only then the ones known to be dark.
+    return lit or (unknown + rest) or dark
 
 
 def _best_file(hit: dict) -> str | None:
