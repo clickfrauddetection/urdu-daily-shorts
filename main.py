@@ -446,6 +446,44 @@ def main() -> int:
             failures.append(f"facebook: {e}")
             print(f"  Facebook failed: {e}")
 
+    # ── the marketing pages ──────────────────────────────────────────────────
+    # Only the Qur'an videos, and only every FB_SYNDICATE_EVERY-th one. Both
+    # limits are enforced HERE rather than left to whoever fills the secret:
+    # "just the ayah videos" is the whole point of the arrangement, and a
+    # hadith or a text card going out on a client-facing page because a config
+    # value was set loosely is not a mistake anyone would catch quickly.
+    #
+    # It runs after the channel's own post and never blocks it: a page whose
+    # token has expired must not cost the day's video on the page that matters.
+    if kind == "scripture" and pillar == "quran":
+        pages = config.syndicate_pages()
+        every = config.FB_SYNDICATE_EVERY
+        if pages and every > 0:
+            # Counted on Qur'an videos already posted, so the rotation survives
+            # a failed morning and does not depend on the date.
+            done = len([e for e in _posted()
+                        if e.get("results") and e.get("kind") == "scripture"
+                        and e.get("pillar") == "quran"])
+            if done % every == 0:
+                print(f"\n  Also posting to {len(pages)} marketing page(s) "
+                      f"(every {every} verses)")
+                for pg in pages:
+                    name = pg.get("name") or pg["page_id"]
+                    try:
+                        results[f"facebook:{name}"] = (
+                            poster_fb_reels.post_to_fb_reels(
+                                path, caption,
+                                page_id=pg["page_id"], token=pg["token"]))
+                        print(f"    {name}: published")
+                    except Exception as e:
+                        # Not a failure of the run. The video is already up on
+                        # the channel's own page, which is what the day was for.
+                        print(f"    {name}: failed — {e}")
+            else:
+                nxt = every - (done % every)
+                print(f"\n  Marketing pages: not this one "
+                      f"(next in {nxt} verse{'s' if nxt > 1 else ''})")
+
     if not poster_youtube_shorts.configured():
         skipped.append("youtube (no YOUTUBE_* secrets)")
     else:

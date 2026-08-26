@@ -113,6 +113,11 @@ jobs:
           REPLICATE_BG_MODE: ${{ vars.REPLICATE_BG_MODE }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          # The marketing pages that also carry the Qur'an videos. One secret
+          # holding JSON — see config.syndicate_pages(). Unset means no
+          # syndication at all, which is the safe default and the current one.
+          FB_SYNDICATE: ${{ secrets.FB_SYNDICATE }}
+          FB_SYNDICATE_EVERY: ${{ vars.FB_SYNDICATE_EVERY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}

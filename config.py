@@ -4,6 +4,7 @@ One place for every knob. Credentials come from the environment only — the
 same secret VALUES as social-media-posts-agent and tiktok-reels-agent, so a
 new Meta app / YouTube client is not needed, only new repo secrets.
 """
+import json
 import os
 
 # -------------------------------------------------------------------- channel
@@ -60,6 +61,42 @@ IMAGE_GEN_RETRIES = int(os.environ.get("IMAGE_GEN_RETRIES") or 3)
 
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID", "")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN", "")
+
+# ---------------------------------------------------------------- syndication
+# Other pages that should also carry the Qur'an videos — the marketing pages
+# tiktok-reels-agent posts to. One secret holding JSON, so adding a page is
+# editing a secret rather than adding two:
+#
+#   FB_SYNDICATE = [{"name":"clickadsprotector","page_id":"...","token":"..."}]
+#
+# ONLY the Qur'an videos go. Not the hadith ones, not the text cards — see
+# main.py, where that is enforced rather than left to whoever sets this.
+#
+# WHAT THIS COSTS, so it is a decision and not a default:
+#   tiktok-reels-agent posts about 13 videos a month to those pages. At every
+#   third verse this adds ~10, which makes the page roughly 43% religious
+#   content. Facebook learns who engages with a page, and religious posts here
+#   draw an audience that is not looking for an ads service — so the marketing
+#   posts afterwards get shown to them and reach less, not more. Raise
+#   FB_SYNDICATE_EVERY to post less often; 0 turns it off entirely.
+FB_SYNDICATE_RAW = os.environ.get("FB_SYNDICATE", "").strip()
+FB_SYNDICATE_EVERY = int(os.environ.get("FB_SYNDICATE_EVERY") or 3)
+
+
+def syndicate_pages() -> list[dict]:
+    """The extra pages, or [] — a broken value must not lose the day's video."""
+    if not FB_SYNDICATE_RAW:
+        return []
+    try:
+        pages = json.loads(FB_SYNDICATE_RAW)
+    except Exception as e:
+        print(f"  FB_SYNDICATE is not valid JSON ({e}) — no syndication")
+        return []
+    good = [p for p in pages if p.get("page_id") and p.get("token")]
+    if len(good) != len(pages):
+        print(f"  {len(pages) - len(good)} syndicate page(s) missing an id or "
+              f"a token — skipped")
+    return good
 GRAPH_API_VERSION = "v21.0"
 
 YOUTUBE_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
