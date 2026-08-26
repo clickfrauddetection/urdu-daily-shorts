@@ -39,9 +39,10 @@ import json
 import os
 import random
 
+import seasonal
 import urdu
 from config import DEFAULT_CLAUDE_MODEL, WRITER_EFFORT, LOG_FILE, CHANNEL_NAME
-from content import ask, _posted
+from content import ask, _client, _posted
 
 # One scene. The whole video is a single frame whose text moves, so the
 # renderer's per-scene machinery has exactly one thing to render and the scroll
@@ -132,16 +133,53 @@ def duration_for(lines: list[str]) -> float:
     return max(MIN_SECONDS, min(MAX_SECONDS, len(lines) * SECONDS_PER_LINE))
 
 
+def todays_topic(fallback: str, pillar: str = "") -> tuple[str, str]:
+    """What today is actually about.
+
+    The season wins when there is one, because a card that names the week the
+    viewer is having reads as written today rather than written whenever. Most
+    days there is no season and the ordinary queue's turn comes round, which is
+    the point — this is a nudge, not a replacement for the queue.
+    """
+    posted = [e for e in _posted() if e.get("results")]
+    used = {e.get("topic") for e in posted}
+    hit = seasonal.topic_for(posted=len([e for e in posted
+                                         if e.get("kind") == "text"]),
+                             exclude=used)
+    if hit:
+        topic, season = hit
+        print(f"  season: {season} -> {topic}")
+        return topic, season
+    return fallback, pillar
+
+
 def build_spec(topic: str, pillar: str = "") -> dict:
     """One silent card: a few lines of Urdu and the clock they travel on."""
+    topic, pillar = todays_topic(topic, pillar)
     shape = next_shape()
     lo, hi = SHAPES[shape]["lines"]
     n = random.randint(lo, hi)
     print(f"  shape: {shape} ({n} lines, silent)")
 
-    raw = ask(SYSTEM, PROMPT.format(topic=topic, brief=SHAPES[shape]["brief"],
-                                    n=n, max_words=MAX_WORDS_PER_LINE),
-              effort=WRITER_EFFORT)
+    # The client directly, not ask(). ask() is the small shared helper that
+    # urdu.repair borrows and it takes no effort setting — passing one raises
+    # TypeError on the first real run, which is exactly where this was headed.
+    # Both other writers call the client the same way, for the same reason.
+    msg = _client().messages.create(
+        model=DEFAULT_CLAUDE_MODEL,
+        output_config={"effort": WRITER_EFFORT},
+        # Generous on purpose: max_tokens bounds thinking plus visible text,
+        # and a truncated object surfaces as a JSONDecodeError rather than as
+        # a budget error, which is a much harder thing to read in a log.
+        max_tokens=4000, system=SYSTEM,
+        messages=[{"role": "user", "content": PROMPT.format(
+            topic=topic, brief=SHAPES[shape]["brief"],
+            n=n, max_words=MAX_WORDS_PER_LINE)}])
+    raw = "".join(b.text for b in msg.content if b.type == "text").strip()
+    if raw.startswith("```"):
+        raw = raw.strip("`").strip()
+        if raw.startswith("json"):
+            raw = raw[4:].strip()
     spec = json.loads(raw)
 
     lines = [str(x).strip() for x in (spec.get("lines") or []) if str(x).strip()]
