@@ -225,5 +225,20 @@
         "post_id": "122105932395445401"
       }
     }
+  },
+  {
+    "at": "2026-08-26T14:01:31+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "rabi_awwal",
+    "topic": "seerat se aik chhoti aadat",
+    "title": "سیرت کی ایک چھوٹی سی عادت",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122106804195445401"
+      }
+    }
   }
 ]
