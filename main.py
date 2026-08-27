@@ -85,6 +85,19 @@ SILENT_AYAH_SECONDS = float(os.environ.get("SILENT_AYAH_SECONDS") or 4.5)
 SILENT_HOOK_SECONDS = float(os.environ.get("SILENT_HOOK_SECONDS") or 2.2)
 
 
+def _posted() -> list[dict]:
+    """Every entry in the posted log, or [] — a missing or half-written log
+    must not cost the day's video."""
+    if not os.path.exists(LOG_FILE):
+        return []
+    with open(LOG_FILE, encoding="utf-8") as f:
+        try:
+            entries = json.load(f)
+        except json.JSONDecodeError:
+            return []
+    return entries if isinstance(entries, list) else []
+
+
 def _published() -> int:
     """How many videos this channel has actually posted.
 
@@ -93,14 +106,7 @@ def _published() -> int:
     and it counts POSTS, not runs. A day the build fails, or a rehearsal that
     published nowhere, does not flip the rhythm.
     """
-    if not os.path.exists(LOG_FILE):
-        return 0
-    with open(LOG_FILE, encoding="utf-8") as f:
-        try:
-            entries = json.load(f)
-        except json.JSONDecodeError:
-            return 0
-    return len([e for e in entries if e.get("results")])
+    return len([e for e in _posted() if e.get("results")])
 
 
 def _kind_for_today(override: str | None = None) -> str:
