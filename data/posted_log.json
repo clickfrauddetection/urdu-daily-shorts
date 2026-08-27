@@ -240,5 +240,20 @@
         "post_id": "122106804195445401"
       }
     }
+  },
+  {
+    "at": "2026-08-27T22:57:04+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "rabi_awwal",
+    "topic": "narmi se baat karna",
+    "title": "نرمی سے بات کرنے کا آسان طریقہ",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122107529985445401"
+      }
+    }
   }
 ]
