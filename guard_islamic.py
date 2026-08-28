@@ -25,6 +25,8 @@ is the one that actually matters:
 Both are fatal by default. Losing a day's video is cheap.
 """
 import re
+
+import config
 import unicodedata
 
 from guard import UnsafeContent
@@ -183,7 +185,8 @@ def disclaimer(spec: dict) -> str:
     if src.get("kind") == "quran":
         return (f"آیت: {src.get('citation', '')}\n"
                 f"ترجمہ: فتح محمد جالندھری — بحوالہ alquran.cloud\n"
-                f"تلاوت: مشاری العفاسی — ترجمہ پڑھا: شمشاد علی خان\n"
+                f"تلاوت: {config.QURAN_RECITER_NAME} — "
+                f"ترجمہ پڑھا: {config.QURAN_UR_RECITER_NAME}\n"
                 f"تشریح: تفسیر المیسر (مجمع الملك فهد) کی روشنی میں، "
                 f"آسان اردو میں\n"
                 f"کسی غلطی کی نشاندہی کریں — ہم اسے درست کریں گے۔")

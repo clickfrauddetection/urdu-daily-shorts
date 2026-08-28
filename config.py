@@ -173,6 +173,22 @@ QURAN_RECITER = os.environ.get("QURAN_RECITER") or "ar.alafasy"
 # hadith translation is narrated either way.
 TARJUMA_AUDIO = (os.environ.get("TARJUMA_AUDIO") or "human").lower()
 QURAN_UR_RECITER = os.environ.get("QURAN_UR_RECITER") or "ur.khan"
+
+# WHAT THE CAPTION CREDITS. Separate from the identifiers above because the
+# identifier is what the CDN is keyed by and this is a person's name under a
+# recitation of the Qur'an — the one field on this channel that must not be
+# wrong, and the one nothing upstream can verify for us.
+#
+# The Urdu name is the harder one and it is not settled. alquran.cloud labels
+# ur.khan "شمشاد علی خان", and that is the only claim our own source makes, so
+# it is the default. But TWO complete Urdu readings of the Jalandhry
+# translation exist behind Alafasy's recitation — Shamshad Ali Khan's and
+# Merajuddin Khan's — and the identifier "ur.khan" does not distinguish them.
+# Anyone who recognises the voice should trust their ears over this default and
+# set the variable; it is one repo variable, no commit.
+QURAN_RECITER_NAME = os.environ.get("QURAN_RECITER_NAME") or "مشاری العفاسی"
+QURAN_UR_RECITER_NAME = (os.environ.get("QURAN_UR_RECITER_NAME")
+                         or "شمشاد علی خان")
 # How much of the frame the recitation is allowed to own before the narrator
 # speaks. The ayah is recited in full first, in silence — this is the moment
 # the video exists for, and talking over it is the one edit that would make

@@ -138,6 +138,12 @@ jobs:
           # different one in the audio.
           TARJUMA_AUDIO: ${{ vars.TARJUMA_AUDIO }}
           QURAN_UR_RECITER: ${{ vars.QURAN_UR_RECITER }}
+          # The two names the caption CREDITS, as opposed to the identifiers
+          # the CDN is keyed by. Variables because a person's name under a
+          # recitation is the one field here that must not be wrong, and
+          # because the Urdu one is genuinely uncertain — see config.py.
+          QURAN_RECITER_NAME: ${{ vars.QURAN_RECITER_NAME }}
+          QURAN_UR_RECITER_NAME: ${{ vars.QURAN_UR_RECITER_NAME }}
           # Pins the shape for a run instead of letting length and rotation
           # pick it — "full", "recitation_first", "tarjuma_only",
           # "tarjuma_first". Left unset in normal operation.
