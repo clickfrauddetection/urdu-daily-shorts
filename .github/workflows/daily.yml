@@ -129,6 +129,19 @@ jobs:
           # the Qur'an, and which reciter.
           QURAN_UR_EDITION: ${{ vars.QURAN_UR_EDITION }}
           QURAN_RECITER: ${{ vars.QURAN_RECITER }}
+          # Who READS the translation. "human" is Shamshad Ali Khan's recorded
+          # reading — the only recorded Urdu edition that exists, so this is a
+          # choice between him and the channel's own narrator ("voice"), not a
+          # choice between readers. QURAN_UR_RECITER is here for the day the
+          # CDN carries a second one; changing QURAN_UR_EDITION without also
+          # setting this to "voice" puts one translation on screen and a
+          # different one in the audio.
+          TARJUMA_AUDIO: ${{ vars.TARJUMA_AUDIO }}
+          QURAN_UR_RECITER: ${{ vars.QURAN_UR_RECITER }}
+          # Pins the shape for a run instead of letting length and rotation
+          # pick it — "full", "recitation_first", "tarjuma_only",
+          # "tarjuma_first". Left unset in normal operation.
+          SCRIPTURE_SHAPE: ${{ vars.SCRIPTURE_SHAPE }}
           RENDER_SCALE: ${{ vars.RENDER_SCALE }}
           # Without this, CI sees a pipe rather than a terminal, Python buffers
           # stdout, and the whole log arrives at once when the process exits —

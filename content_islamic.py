@@ -92,12 +92,22 @@ SHAPES = {
     # a different video to look at, and the shortest of the three.
     "tarjuma_only": ["hook", "tarjuma", "tashreeh", "tashreeh",
                      "amal", "follow"],
+    # Naseem's ask: a video that opens on the MEANING. No hook — the first
+    # frame is the translation with its reference, and the first sound is
+    # Shamshad Ali Khan reading it. The recitation is not dropped, only moved
+    # behind it: a scroller who does not read Arabic gets something they
+    # understand in second one, and still hears the qari.
+    #
+    # This is the only shape where the Urdu precedes the Arabic. That is a
+    # deliberate editorial choice and it is confined to here, so putting it
+    # back is deleting one line of this dict and one entry below.
+    "tarjuma_first": ["tarjuma", "ayah", "tashreeh", "amal", "follow"],
 }
 
 # What a SHORT verse alternates between. recitation_first is absent on purpose:
 # it is chosen by length and never by rotation, because opening on a four-word
 # ayah puts the strongest frame on screen before anyone has registered it.
-SHORT_ROTATION = ["full", "tarjuma_only"]
+SHORT_ROTATION = ["full", "tarjuma_only", "tarjuma_first"]
 
 
 def next_shape(item: dict) -> str:
@@ -386,23 +396,31 @@ def build_spec(entry: dict, pillar: str = "") -> dict:
         scenes.append(scene("hook", written["hook"], ""))
 
     if item["kind"] == "quran":
-        if "ayah" in roles:
-            scenes.append(scene(
-                "ayah", item["arabic"], "",
-                verbatim=True,
-                # No TTS on this scene at all. The audio is the qari's,
-                # downloaded by islamic_sources.recitation(), and a scene with
-                # no recitation available is handled in main.py rather than
-                # read aloud by a synthetic Urdu voice.
-                recite=True, arabic=True,
-                citation=item["citation"]))
-        scenes.append(scene(
+        ayah_scene = scene(
+            "ayah", item["arabic"], "",
+            verbatim=True,
+            # No TTS on this scene at all. The audio is the qari's,
+            # downloaded by islamic_sources.recitation(), and a scene with
+            # no recitation available is handled in main.py rather than
+            # read aloud by a synthetic Urdu voice.
+            recite=True, arabic=True,
+            citation=item["citation"])
+        tarjuma_scene = scene(
             "tarjuma", item["citation"], item["urdu"],
             verbatim=True, body=item["urdu"],
             # Read by a person rather than by the narrator, when the recorded
             # translation is available — see config.TARJUMA_AUDIO. With this on,
             # no synthetic voice touches scripture at all.
-            recite_ur=(TARJUMA_AUDIO == "human")))
+            recite_ur=(TARJUMA_AUDIO == "human"))
+        # The shape decides which of the two opens the video, and whether the
+        # Arabic frame is there at all. Taking the order from `roles` rather
+        # than from the order they are written here is what lets a shape put
+        # the meaning first without a second copy of this block.
+        for role in roles:
+            if role == "ayah":
+                scenes.append(ayah_scene)
+            elif role == "tarjuma":
+                scenes.append(tarjuma_scene)
     else:
         if item["intro"]:
             scenes.append(scene(
