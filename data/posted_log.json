@@ -255,5 +255,25 @@
         "post_id": "122107529985445401"
       }
     }
+  },
+  {
+    "at": "2026-08-28T12:32:05+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "quran",
+    "topic": "quran 94:8",
+    "title": "سورۃ الشرح: اپنے رب کی طرف رجوع کریں",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122107717467445401"
+      },
+      "facebook:seoblogy": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "1480163937464967"
+      }
+    }
   }
 ]
