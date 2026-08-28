@@ -2,7 +2,6 @@
   "_comment": "A niche is either a flat list of topics, or an object of pillar -> topics. A pillar object rotates: consecutive days come from different pillars, so a broad channel does not run five sleep videos in a row and read as a sleep channel. Filled by hand on purpose (see content.py) — a model asked daily for a topic converges within about two weeks. The pillar name also picks the background footage (stock_bg.THEMES) and the generated fallback prompt (replicate_bg.PILLAR_PROMPT), so a money topic does not open on a night sky.",
   "daily": {
     "neend": [
-      "raat ko bistar par phone dekhne se neend kyun der se aati hai",
       "roz ek hi waqt par sona kyun sab se bara farq daalta hai",
       "subah ki dhoop ka raat ki neend se taalluq",
       "sone se pehle aakhri do ghante ka routine",
@@ -37,16 +36,6 @@
       "mez par kya rakha ho aur kya na ho",
       "chhoti chhoti rukawatein jo poora din kha jaati hain"
     ],
-    "phone": [
-      "subah uth kar sab se pehle phone dekhna",
-      "notifications band karne ka farq",
-      "scroll karte karte waqt kahan jaata hai",
-      "khaana khate waqt phone",
-      "bachon ke saamne apna phone",
-      "phone ko kamre se bahar rakhna",
-      "sirf ek app par roz kitna waqt",
-      "khabrein kitni baar dekhna kaafi hai"
-    ],
     "ghar": [
       "roz das minute ki safai",
       "cheezon ki apni jagah",
@@ -72,7 +61,6 @@
     "rishtay": [
       "sun-na seekhna",
       "ghar aa kar pehle das minute",
-      "bina phone ke ek waqt ka khaana",
       "maafi maangne ka sahih waqt",
       "walidain ko roz ek call",
       "bachon se sawal poochne ka andaz",
@@ -96,7 +84,6 @@
       "nashta chhodne ki aadat asal mein kya karti hai",
       "paani peene ka waqt — subah, din aur raat",
       "chaye ka teesra cup kis waqt bhaari padta hai",
-      "khana khate waqt phone dekhne ki aadat",
       "bazaar ka khana hafte mein kitni baar",
       "mithai aur chini ki talab kis waqt uthti hai",
       "plate chhoti karne ka purana tareeqa",
@@ -117,7 +104,6 @@
     ]
   },
   "sleep": [
-    "raat ko bistar par phone dekhne se neend kyun der se aati hai",
     "roz ek hi waqt par sona kyun sab se bara farq daalta hai",
     "subah ki dhoop ka raat ki neend se taalluq",
     "sone se pehle aakhri do ghante ka routine",

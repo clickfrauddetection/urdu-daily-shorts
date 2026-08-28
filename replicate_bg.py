@@ -55,8 +55,6 @@ PILLAR_PROMPT = {
               "and amber tones"),
     "waqt": ("a quiet desk by a window at first light, warm soft rim light, "
              "shallow depth of field, calm and uncluttered"),
-    "phone": ("a dark room lit only by a faint cool screen glow, deep blue "
-              "tones, soft bokeh"),
     "ghar": ("morning sunlight through a curtain onto a simple tidy room, warm "
              "soft tones, a plant by the window"),
     "aadat": ("an empty park path at sunrise, mist and long shadows, cool "

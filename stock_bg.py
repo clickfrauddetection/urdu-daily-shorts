@@ -41,8 +41,6 @@ THEMES = {
               "office window evening", "shopping street evening"],
     "waqt": ["clock ticking macro", "desk sunlight morning", "sand timer",
              "book pages turning", "traffic timelapse day"],
-    "phone": ["city lights night timelapse", "rain window desk",
-              "abstract light bokeh", "dark room screen glow"],
     "ghar": ["sunlight through curtains", "calm bedroom window",
              "plant leaves sunlight", "kitchen window morning"],
     "aadat": ["park path morning", "running shoes road", "water pouring glass",
