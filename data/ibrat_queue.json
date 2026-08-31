@@ -1,0 +1,90 @@
+{
+  "_comment": "The ibrat queue: one everyday SITUATION per entry, and the verse that closes the video on it. Both are chosen by hand and neither is the model's to pick — the situation because a model asked daily for a good one converges inside a fortnight (see content.py), and the verse because a model asked to find scripture that fits a story will always find something that sounds like it fits. That is the single failure this whole format has to not have. `_ur` is there so the file can be read by eye; nothing uses it. Every verse here was fetched and measured before it was written down: all are under 200 characters of Urdu, because the translation is read aloud after a five-scene story and a long one puts the video past the minute. A hadith entry is {\"topic\": ..., \"hadith\": \"<HadeethEnc id>\"} and works the same way.",
+  "entries": [
+    {
+      "topic": "dukaandar bacha hua chutta wapas karna bhool gaya",
+      "quran": "99:8",
+      "_ur": "اور جس نے ذرہ بھر برائی کی ہوگی وہ اسے دیکھ لے گا"
+    },
+    {
+      "topic": "raste par gira hua bataua mila, koi dekh nahi raha tha",
+      "quran": "99:7",
+      "_ur": "تو جس نے ذرہ بھر نیکی کی ہو گی وہ اس کو دیکھ لے گا"
+    },
+    {
+      "topic": "ghusse mein muh se nikli ek baat",
+      "quran": "50:18",
+      "_ur": "کوئی بات اس کی زبان پر نہیں آتی مگر ایک نگہبان اس کے پاس تیار رہتا ہے"
+    },
+    {
+      "topic": "mohalle ka yateem bachcha aur uska hissa",
+      "quran": "93:9",
+      "_ur": "تو تم بھی یتیم پر ستم نہ کرنا"
+    },
+    {
+      "topic": "taraazu par thora sa kam tolna",
+      "quran": "17:35",
+      "_ur": "اور جب (کوئی چیز) ناپ کر دینے لگو تو پیمانہ پورا بھرا کرو اور (جب تول "
+    },
+    {
+      "topic": "bachche ne qeemti cheez tor di",
+      "quran": "3:134",
+      "_ur": "جو آسودگی اور تنگی میں (اپنا مال خدا کی راہ میں) خرچ کرتےہیں اور غصے ک"
+    },
+    {
+      "topic": "madad karke baad mein taana dena",
+      "quran": "2:263",
+      "_ur": "جس خیرات دینے کے بعد (لینے والے کو) ایذا دی جائے اس سے تو نرم بات کہہ "
+    },
+    {
+      "topic": "wada karke bhool jana",
+      "quran": "61:2",
+      "_ur": "مومنو! تم ایسی باتیں کیوں کہا کرتے ہو جو کیا نہیں کرتے"
+    },
+    {
+      "topic": "chhoti si jhooti maazrat",
+      "quran": "33:70",
+      "_ur": "مومنو خدا سے ڈرا کرو اور بات سیدھی کہا کرو"
+    },
+    {
+      "topic": "padosi ki sakht baat ka jawab",
+      "quran": "23:96",
+      "_ur": "اور بری بات کے جواب میں ایسی بات کہو جو نہایت اچھی ہو۔ اور یہ جو کچھ ب"
+    },
+    {
+      "topic": "salam ka jawab",
+      "quran": "4:86",
+      "_ur": "اور جب تم کو کوئی دعا دے تو (جواب میں) تم اس سے بہتر (کلمے) سے (اسے) د"
+    },
+    {
+      "topic": "bahes barhti gayi, kab hat jana chahiye tha",
+      "quran": "7:199",
+      "_ur": "(اے محمدﷺ) عفو اختیار کرو اور نیک کام کرنے کا حکم دو اور جاہلوں سے کنا"
+    },
+    {
+      "topic": "naya kaam, naya paisa, purane dost",
+      "quran": "31:18",
+      "_ur": "اور (ازراہ غرور) لوگوں سے گال نہ پھلانا اور زمین میں اکڑ کر نہ چلنا۔ ک"
+    },
+    {
+      "topic": "imtihan mein naqal ka mauqa",
+      "quran": "9:119",
+      "_ur": "اے اہل ایمان! خدا سے ڈرتے رہو اور راست بازوں کے ساتھ رہو"
+    },
+    {
+      "topic": "apne hisse ka khana kisi bhookay ko dena",
+      "quran": "76:8",
+      "_ur": "اور باوجود یہ کہ ان کو خود طعام کی خواہش (اور حاجت) ہے فقیروں اور یتیم"
+    },
+    {
+      "topic": "padosi ne cheez maangi aur mana kar diya",
+      "quran": "107:7",
+      "_ur": "اور برتنے کی چیزیں عاریتہً نہیں دیتے"
+    },
+    {
+      "topic": "rishtedaar se naaraazgi, pehla qadam kaun uthaye",
+      "quran": "16:90",
+      "_ur": "خدا تم کو انصاف اور احسان کرنے اور رشتہ داروں کو (خرچ سے مدد) دینے کا "
+    }
+  ]
+}

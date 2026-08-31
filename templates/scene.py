@@ -105,7 +105,13 @@ def render_scene(scene: dict, duration: float, lead: float,
     p = PALETTE
     # The hook scene gets the accent; tactic scenes get the green so a viewer
     # can tell "here is the problem" from "here is what to do" without reading.
-    tone = p["accent"] if scene["role"] in ("hook", "problem", "cause") else p["accent_2"]
+    # A scene may name its own, and one kind uses that: an ibrat video colours
+    # the good half green and the wrong half gold, so the argument of the
+    # format is carried by the frame before a word of it is read. A scene that
+    # names nothing falls through to the habit channel's rule, unchanged.
+    tone = PALETTE.get(scene.get("tone") or "") or (
+        p["accent"] if scene["role"] in ("hook", "problem", "cause")
+        else p["accent_2"])
 
     # Decided per scene, from the text that actually arrived, not once for the
     # repo. A script that ships one Roman Urdu headline among seven Urdu ones

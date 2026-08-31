@@ -100,34 +100,75 @@ python main.py --post                 # publish to both platforms
 Every build writes `out/<name>.json` — the exact script the file was made from.
 When a video performs, that is the only useful question.
 
-## Two kinds of video, one channel
+## Four kinds of video, one channel
 
-The channel alternates: one day a habit video, the next day an ayah or a
-hadith. It is one Page, one YouTube channel, one set of secrets and one posted
-log — a second Page would have meant a second audience to grow from zero for
-something that can simply take turns.
+One Page, one YouTube channel, one set of secrets and one posted log — a second
+Page would have meant a second audience to grow from zero for something that
+can simply take turns. Everything that differs between the kinds is in the
+`KINDS` table at the top of `main.py` and nowhere else, which is the only
+reason one channel can carry four shapes without four of every function.
 
-`CONTENT_KIND` decides — `mixed` (default, alternates), `habit`, or
-`scripture`. The alternation counts **posted videos, not dates**, so a failed
-morning does not flip the rhythm. `--kind` overrides it for one run, and each
-queue rotates on its own history: the habit pillars step once per habit video,
-the scripture queue alternates Qur'an and hadith across scripture videos.
+| | `habit` | `scripture` | `text` | `ibrat` |
+|---|---|---|---|---|
+| what | a wellness script | the day's ayah or hadith | a silent card | a story that ends on a verse |
+| writes | `content.py`, 8 scenes | `content_islamic.py`, 5–7 | `content_text.py`, 1 | `content_ibrat.py`, 7 |
+| guard | `guard.py` — medical claims | `guard_islamic.py` — integrity first | `guard.py` | `guard_ibrat.py` — integrity, then invented events |
+| frame | `templates/scene.py` | `templates/scene_islamic.py` | `templates/scene_text.py` | both, per scene |
+| voice | narrator | qari + recorded translation | none | narrator, then the recorded translation |
+| bed | music | ambience, silent under the recitation | music | music, silent under the verse |
+| queue | `data/topics.json` | `data/islamic_queue.json` | `data/topics.json` | `data/ibrat_queue.json` |
 
-| | habit day | scripture day |
-|---|---|---|
-| writes | `content.py`, eight scenes | `content_islamic.py`, seven |
-| guard | `guard.py` — medical claims | `guard_islamic.py` — integrity first |
-| frame | `templates/scene.py` | `templates/scene_islamic.py` |
-| bed | music | ambience only, silenced under the recitation |
-| queue | `data/topics.json` | `data/islamic_queue.json` |
+**Which one runs is the CLOCK's decision, not an alternation.** The workflow
+reads the cron that fired: 01:00 UTC is scripture, 13:00 UTC is the text card.
+A channel that posts the same kind of thing at the same time every day is one a
+viewer can form a habit around. `CONTENT_KIND` and `--kind` are for manual runs
+and for pinning; `habit` and `ibrat` are buildable by name but are not on the
+calendar, and putting one there is a cron line in `daily.yml`.
+
+Every queue counts **posted videos, not dates**, so a failed morning does not
+flip anything, and a rehearsal that published nowhere does not burn an entry.
 
 ```bash
 python build_queue.py                     # fill / top up the scripture queue
 python main.py                            # whatever today's turn is
 python main.py --kind scripture           # force one
 python main.py --topic "quran 94:5"
+python main.py --kind ibrat
+python main.py --topic "taraazu par thora sa kam tolna"   # an ibrat situation
 python main.py --topic "hadith 5907" --post
 ```
+
+### `ibrat` — one moment, two choices
+
+Naseem's ask, and the shape is the argument: the same ordinary afternoon told
+twice.
+
+    neki → natija_neki → gunah → natija_gunah → akhirat → the verse → follow
+
+The two halves must be the **same situation**, not two situations. A good man
+and then a different bad man is a fable about strangers; one person's afternoon
+run twice is about the viewer. The frame carries which half you are in —
+`content_ibrat.TONE` colours the good half green and the wrong half gold, using
+the same two accents the habit template has meant "what to do" and "the
+problem" with since the first video.
+
+Two rules specific to this kind, both enforced rather than requested:
+
+- **The model does not choose the verse.** `data/ibrat_queue.json` pairs each
+  situation with the verse it closes on, by hand. A model asked to find a verse
+  that fits a story it has just written will always find one that sounds like
+  it fits, and that is the whole risk of the format, not a quality problem. So
+  `--topic` **resolves against that queue** rather than replacing it: a topic
+  that is not in the file is an instruction to add it there with its verse.
+- **The story is an example and never an event.** `guard_ibrat.py` refuses the
+  language of "a true incident", and refuses a prophet, a companion or an
+  honorific in any model-written scene — a narration written by a model is an
+  invented hadith with the isnad filed off. The caption says so too, in Urdu,
+  above the sourcing line.
+
+Everything `guard_islamic.py` already refuses still applies, including handing
+out a verdict on where somebody ends up: the akhirat scene may say a person
+will be *asked*, and may not say the answer.
 
 ### The sacred text is never written by a model
 

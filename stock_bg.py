@@ -68,6 +68,17 @@ THEMES = {
     "hadith": ["river valley mountains", "grass meadow wind",
                "forest light rays", "mountain lake calm",
                "green hills clouds", "stream rocks water"],
+    # The ibrat story. A road, a doorway, a long evening shadow — the look of
+    # a moment a person is standing in and about to choose from. Deliberately
+    # not the scripture greenery: those videos ARE the verse, this one is a
+    # story that ends on one, and opening them on the same picture would make
+    # the two kinds look like one repeated post.
+    #
+    # Nothing figurative and nobody in frame, for the same reason as the
+    # scripture themes: a stock stranger's face on a story about a wrong turn
+    # attaches that wrong turn to a real person.
+    "ibrat": ["empty road horizon", "long shadows evening", "open door light",
+              "footprints sand", "dusk street lamp", "clouds timelapse"],
     # Kept for the older flat niches.
     "sleep": ["night sky stars", "moon clouds night", "calm bedroom window",
               "rain on window night", "candle flame dark"],

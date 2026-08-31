@@ -66,6 +66,21 @@ _P = {
     "hands": "M7 21c-1.5-3-2-5-2-8V8a1.5 1.5 0 0 1 3 0M17 21c1.5-3 2-5 2-8V8"
              "a1.5 1.5 0 0 0-3 0M8 13V5.5a1.5 1.5 0 0 1 3 0V12"
              "M13 12V5.5a1.5 1.5 0 0 1 3 0V13",
+    # the ibrat story. The two halves of that format are told with colour
+    # (see content_ibrat.TONE); these carry the beat.
+    #
+    # A balance for the akhirat scene, because the mizan is the image that
+    # scene is already reaching for and a star or a clock there would be
+    # furniture standing in for it. A crack running down for what a wrong turn
+    # costs — the split is the point, and it reads at a glance where a frown or
+    # a broken heart would read as a sticker.
+    "scales": "M12 3v18M8 21h8M5 7h14M12 3a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8z"
+              "M5 7 2 13a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z",
+    # Branches, not just a zigzag. The first version was a single narrow line
+    # down the middle and at 110px inside the disc it read as a lightning bolt
+    # — which is weather, not consequence. The two short forks are what make it
+    # a split, and they are what fill the grid the other icons fill.
+    "crack": "M13 2 10 9l4 2-3 5 2 6M10.6 10.2 6.5 13M14.2 16.4 18 14.2",
     # narrative furniture
     "alert": "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3"
              "L13.7 3.9a2 2 0 0 0-3.4 0z",
@@ -89,6 +104,14 @@ ROLE_DEFAULT = {
     "pehle": "clock",
     "baad": "sunrise",
     "wajah": "brain",
+    # the ibrat story's roles
+    "neki": "hands",
+    # What a small good thing turns into, rather than a tick confirming it
+    # happened — the scene is about the growth, not the deed.
+    "natija_neki": "leaf",
+    "gunah": "alert",
+    "natija_gunah": "crack",
+    "akhirat": "scales",
     # the scripture profile's roles
     "ayah": "book_open",
     "hadith": "quote",

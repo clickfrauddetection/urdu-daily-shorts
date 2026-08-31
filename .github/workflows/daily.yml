@@ -23,17 +23,24 @@ on:
     #
     # GitHub's scheduler is best-effort and routinely runs a cron ten to thirty
     # minutes late under load. Fine for both slots; not worth correcting.
+    #
+    # The ibrat story (content_ibrat.py) is deliberately NOT on the calendar
+    # yet. It is the most expensive kind here — six TTS calls plus a downloaded
+    # translation — and its queue is seventeen situations deep, so daily would
+    # drain it in under three weeks. Giving it a slot is one more cron line and
+    # one more case in "Pick today's kind" below; every-third-day at 15:00 UTC
+    # (20:00 PKT) is the shape to start from.
     - cron: "0 1 * * *"
     - cron: "0 13 * * *"
   workflow_dispatch:
     inputs:
       topic:
-        description: 'Override the queue — a topic, or "quran 94:5" / "hadith 5907"'
+        description: 'Override the queue — a topic, "quran 94:5" / "hadith 5907", or an ibrat situation'
         required: false
       kind:
         description: "Force today's kind instead of alternating"
         type: choice
-        options: ["", "habit", "scripture", "text"]
+        options: ["", "habit", "scripture", "text", "ibrat"]
         default: ""
       dry_run:
         description: "Build only, publish nothing"

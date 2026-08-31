@@ -33,8 +33,10 @@ from renderer import render_layer, probe_fonts
 
 # Both writers, both guards, both frames — loaded, not chosen, because the
 # choice is made per RUN rather than per repo. See _kind_for_today().
+import content_ibrat
 import content_islamic
 import content_text
+import guard_ibrat
 import guard_islamic
 import islamic_sources
 from templates import scene as scene_habit
@@ -69,6 +71,26 @@ KINDS = {
         "guard": guard,
         "render_scene": scene_text.render_scene,
         "fits_for": scene_text.fits_for,
+        "music": "bed",
+    },
+    "ibrat": {
+        # A narrated story that ends on a real verse — see content_ibrat.py.
+        # It renders through the SCRIPTURE template, and that is not a
+        # shortcut: scene_islamic.render_scene already hands every
+        # non-verbatim scene to the habit template, so the five story scenes
+        # get the habit frame and the closing translation gets the ayah frame,
+        # from one entry, with no third template to keep in step with the
+        # other two.
+        "writer": content_ibrat,
+        "guard": guard_ibrat,
+        "render_scene": scene_scripture.render_scene,
+        "fits_for": scene_scripture.fits_for,
+        # A bed, unlike a scripture day: five of the seven scenes are a
+        # narrated story and ambience under those is indistinguishable from a
+        # video whose sound is broken. The bed is muted outright under the
+        # closing translation rather than ducked — see the `quiet` list in
+        # build(), and assembler.add_music for why that is not a level
+        # decision.
         "music": "bed",
     },
 }
@@ -114,8 +136,10 @@ def _kind_for_today(override: str | None = None) -> str:
 
     Only reached on a manual run that chose nothing: the schedule picks by the
     clock, in the workflow. It alternates scripture and text because those are
-    the two kinds actually on the calendar — habit is still in KINDS and still
-    buildable by name, it is simply no longer part of the rotation.
+    the two kinds actually on the calendar — habit and ibrat are both still in
+    KINDS and still buildable by name, they are simply not part of the
+    rotation. Putting ibrat on the calendar is a cron line in daily.yml, not a
+    change here.
     """
     if override:
         return override
@@ -271,15 +295,24 @@ def build(spec: dict, name: str, pillar: str, kind: str) -> tuple[str, float]:
     # and ask for a script that fits, with the real number in hand. One retry:
     # a second is more likely to be the model being stubborn than to help.
     speech = sum(v["duration"] for v in voices)
-    if speech > MAX_DURATION and kind == "scripture":
-        # No re-ask here. The overrun in a scripture video is the recitation
-        # and the translation, and neither is the model's to shorten — asking
-        # for fewer words would only cut the explanation, which is the part
-        # that was already short. A long verse is a QUEUE decision: swap it in
-        # data/islamic_queue.json for a shorter one.
+    if speech > MAX_DURATION and kind != "habit":
+        # No re-ask on any kind that carries scripture. The overrun is the
+        # recitation and the translation, and neither is the model's to
+        # shorten — asking for fewer words would only cut the written part,
+        # which was already the short one. It is a QUEUE decision: swap the
+        # entry for one with a shorter verse.
+        #
+        # The re-ask below is also literally the habit writer, so letting any
+        # other kind reach it would rewrite an ibrat story or a scripture
+        # explanation as an eight-scene wellness script. It failed safe before
+        # this condition named the kind — content.write_script returns the
+        # wrong roles and the ValueError is caught — but it failed safe after
+        # paying for the call.
+        queue = ("data/ibrat_queue.json" if kind == "ibrat"
+                 else "data/islamic_queue.json")
         step(f"Narration is {speech:.1f}s, over {MAX_DURATION:.0f}s — the "
              f"verse and its translation set this length. Shipping it long; "
-             f"pick a shorter entry if this happens often.")
+             f"pick a shorter entry in {queue} if this happens often.")
     elif speech > MAX_DURATION:
         words = sum(len(s["spoken"].split()) for s in scenes)
         target = max(int(words * (MAX_DURATION - 5) / speech), 60)
@@ -319,8 +352,14 @@ def build(spec: dict, name: str, pillar: str, kind: str) -> tuple[str, float]:
 
     # Where the bed must not play at all. Ducking is a level decision and this
     # is not one — see assembler.add_music.
+    #
+    # `recite` is the qari's Arabic. `quiet` is a scene asking for the same
+    # treatment for its own reason: an ibrat video runs a music bed under a
+    # story and then closes on a recorded human reading of a verse, and a bed
+    # ducking politely under that is still a bed playing over scripture.
     quiet = [(starts[i] - RECITATION_PAD, starts[i] + voices[i]["duration"])
-             for i, s in enumerate(scenes) if s.get("recite")]
+             for i, s in enumerate(scenes)
+             if s.get("recite") or s.get("quiet")]
 
     step("Joining the scenes")
     path = assembler.concat(composed, name)
@@ -394,6 +433,18 @@ def main() -> int:
         topic = writer.entry_key(entry)
         step(f"Today: {topic}   [{pillar}]")
         spec = writer.build_spec(entry, pillar)
+    elif kind == "ibrat":
+        # The situation comes from data/ibrat_queue.json and so does the verse
+        # it closes on — the two are paired by hand. `--topic` therefore
+        # RESOLVES against that queue rather than replacing it: a free-text
+        # topic has no verse, and letting the build find one is the single
+        # thing this format must not do. See content_ibrat.parse_key.
+        writer = plan_of["writer"]
+        entry = (writer.parse_key(args.topic) if args.topic
+                 else writer.next_entry())
+        topic, pillar = writer.entry_key(entry), (args.pillar or "ibrat")
+        step(f"Today: {topic}   [closes on {writer.entry_ref(entry)}]")
+        spec = writer.build_spec(entry, pillar)
     else:
         if args.topic:
             topic, pillar = args.topic, (args.pillar or NICHE)
@@ -430,8 +481,15 @@ def main() -> int:
     # its sources, which is the thing a viewer of that channel actually needs
     # in order to check it — and the thing that lets someone who knows better
     # tell us we got it wrong.
-    tail = (guard_islamic.disclaimer(spec) if kind == "scripture"
-            else guard.DISCLAIMER_UR)
+    # An ibrat video needs BOTH halves of its own line: the verse's sourcing,
+    # and the fact that the story around it is an example rather than an event.
+    # See guard_ibrat.disclaimer.
+    if kind == "scripture":
+        tail = guard_islamic.disclaimer(spec)
+    elif kind == "ibrat":
+        tail = guard_ibrat.disclaimer(spec)
+    else:
+        tail = guard.DISCLAIMER_UR
     caption = spec.get("caption", "") + "\n\n" + tail
 
     # A platform with no credentials is SKIPPED, not failed. Those two states
