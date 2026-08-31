@@ -22,7 +22,7 @@ import os
 
 from config import (
     WIDTH, HEIGHT, PALETTE, SAFE_TOP, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT,
-    FONT_DIR, CHANNEL_NAME_UR,
+    FONT_DIR, CHANNEL_NAME_UR, CAPTION_PLATE, CAPTION_HALO,
 )
 from icons import icon, default_for
 
@@ -242,7 +242,14 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
    holds contrast on most clips; the pill holds it on all of them, including the
    bright ones nobody looked at before the video published. */
 .cap-box {{ display:inline-block; padding:20px 30px 26px; border-radius:20px;
-  background:rgba(8,14,24,.72);
+  background:rgba(8,14,24,{CAPTION_PLATE});
+  /* The pill's edge, carried outwards instead of stopping. At a flat .72 it
+     held the words on most clips and lost them on a bright one, and simply
+     darkening it further makes the frame look like a slide. The spread shadow
+     is the pill's own colour with no offset, so it reads as the backing fading
+     out rather than as a border — see config.CAPTION_PLATE for why this is not
+     a backdrop-filter. */
+  box-shadow:0 0 46px 26px rgba(8,14,24,{CAPTION_HALO});
   font-family:{c_font}; font-weight:700; direction:{c_dir};
   /* Nastaliq, so: smaller than the sans caption was, and far more leading.
      Its descenders run deep and two lines at 1.85 clipped into each other. */

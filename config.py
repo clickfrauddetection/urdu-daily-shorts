@@ -340,6 +340,31 @@ EDGE_TTS_RATE = os.environ.get("EDGE_TTS_RATE") or "-6%"
 GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_TTS_MIN_INTERVAL") or 6)
 GEMINI_MAX_BACKOFF = float(os.environ.get("GEMINI_TTS_MAX_BACKOFF") or 75)
 
+# ------------------------------------------------------------- text backing
+# How much dark sits BEHIND the words, over and above the scrim on the picture.
+#
+# The scrim darkens the whole frame and is deliberately light on the scripture
+# template — the point of that template is bright green daylight, and washing
+# the picture grey to hold the type is paying for legibility with the only
+# thing anyone stops for. So the type carries its own ground instead: a plate
+# under the block that is being read, and nothing anywhere else.
+#
+# Both are FEATHERED, never hard-edged, and that is not a detail. A rectangle
+# behind the text turns the frame into a slide, and a framed card around an
+# ayah reads as a graphic — see the note on `.rule` in scene_islamic.py. The
+# caption's plate fades out through a spread shadow of its own colour; the
+# scripture plate is a radial that reaches zero before it reaches an edge.
+#
+# backdrop-filter is not an option for either. These layers are rendered over
+# transparency and composited onto the footage by ffmpeg afterwards, so at the
+# moment the browser paints them there is nothing behind them to blur.
+CAPTION_PLATE = float(os.environ.get("CAPTION_PLATE") or 0.82)
+CAPTION_HALO = float(os.environ.get("CAPTION_HALO") or 0.46)
+# Under the ayah, the translation and the reference. Lower than the caption's,
+# because that block is 74px of outlined Uthmani rather than 40px of Nastaliq
+# and needs settling rather than covering.
+SCRIPTURE_PLATE = float(os.environ.get("SCRIPTURE_PLATE") or 0.40)
+
 # --------------------------------------------------------------------- colour
 PALETTE = {
     "ink": "#F7FAFC",

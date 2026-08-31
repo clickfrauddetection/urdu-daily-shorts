@@ -29,7 +29,7 @@ import os
 
 from config import (
     WIDTH, HEIGHT, PALETTE, SAFE_TOP, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT,
-    FONT_DIR, CHANNEL_NAME_UR,
+    FONT_DIR, CHANNEL_NAME_UR, CAPTION_PLATE, CAPTION_HALO, SCRIPTURE_PLATE,
 )
 from templates.scene import (
     render_scene as render_plain, _font_url, _words_html,
@@ -148,6 +148,29 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
 .middle {{ flex:1; display:flex; flex-direction:column;
   align-items:center; justify-content:center; }}
 
+/* The plate is measured against THIS, not against .middle. .middle is
+   flex:1 — it fills the whole safe area — so a plate sized to it darkened
+   most of the picture to hold four lines of type, which is the trade this
+   template exists to avoid. .block shrinks to what is actually being read. */
+.block {{ position:relative; width:100%;
+  display:flex; flex-direction:column; align-items:center; }}
+
+/* What the type is read against.
+   The scrim above is deliberately light, because the whole point of this
+   template is bright green daylight and washing the picture grey to hold the
+   words pays for legibility with the only thing anyone stops for. So the dark
+   goes where the reading happens and nowhere else.
+   A radial that reaches zero before it reaches an edge, not a rectangle: the
+   note on `.rule` below is that a framed card around revelation reads as a
+   graphic, and a hard-edged panel behind it is the same mistake one layer
+   down. Absolutely positioned, so it changes nothing about where the ayah
+   sits — it is only what sits under it. */
+.plate {{ position:absolute; left:-46px; right:-46px; top:-40px; bottom:-40px;
+  background:radial-gradient(72% 62% at 50% 50%,
+    rgba(6,10,18,{SCRIPTURE_PLATE}) 0%,
+    rgba(6,10,18,{SCRIPTURE_PLATE * 0.78:.3f}) 52%,
+    rgba(6,10,18,0) 100%); }}
+
 /* A hairline rule above and below rather than a box. A framed card around
    revelation reads as a graphic; two thin lines read as room made for it. */
 .rule {{ width:340px; height:2px; opacity:0;
@@ -176,7 +199,8 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
 
 .cap {{ text-align:center; }}
 .cap-box {{ display:inline-block; padding:18px 28px 24px; border-radius:20px;
-  background:rgba(8,14,24,.72);
+  background:rgba(8,14,24,{CAPTION_PLATE});
+  box-shadow:0 0 46px 26px rgba(8,14,24,{CAPTION_HALO});
   font-family:'NastaliqUrdu','SansArabic',serif; font-weight:700; direction:rtl;
   font-size:40px; line-height:2.05;
   text-shadow:var(--edge); }}
@@ -204,10 +228,13 @@ body {{ direction:rtl; color:{p["ink"]}; -webkit-font-smoothing:antialiased;
 <div class="safe">
   <div class="pips">{pips}</div>
   <div class="middle">
+   <div class="block">
+    <div class="plate"></div>
     <div class="rule"></div>
     {body}
     <div class="rule"></div>
     {label}
+   </div>
   </div>
   {caption}
 </div>
