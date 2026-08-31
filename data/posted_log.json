@@ -350,5 +350,20 @@
         "post_id": "122108598429445401"
       }
     }
+  },
+  {
+    "at": "2026-08-31T06:38:47+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "hadith",
+    "topic": "hadith 3135",
+    "title": "بیوہ اور مسکین کی مدد، عبادت جیسا اجر",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122108798643445401"
+      }
+    }
   }
 ]
