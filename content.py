@@ -204,13 +204,23 @@ def next_topic() -> tuple[str, str]:
     # no Page is set up yet, or every poster failed — is a rehearsal, and
     # burning a topic for it means a week of setup quietly costs seven topics
     # and produces nothing. Rehearsals repeat today's topic until it lands.
-    # Habit videos only. The channel alternates with the scripture build, and
-    # counting those here would step the pillar rotation twice a day — the
-    # rotation is meant to answer "how many of THESE have I posted".
-    # `kind` is absent from entries written before the alternation existed;
-    # those were all habit videos.
+    #
+    # EVERY kind that draws from this queue counts, and that is the whole
+    # correctness of the rotation. It read `kind == "habit"` until 2026-09-05,
+    # from when habit was the only kind taking a topic from here. The evening
+    # slot then became the text card, which draws from this same queue under a
+    # different `kind` — so no entry matched any more, `done` stopped growing
+    # and `len(entries)` stopped moving. Both halves of the rotation froze at
+    # once: the pillar stayed on whichever one it was on, and inside it
+    # `remaining[0]` stayed the same topic. The channel posted the identical
+    # sleep video eight evenings running, 2026-08-28 to 09-04.
+    #
+    # The scripture and ibrat builds are still none of this queue's business —
+    # they have queues of their own — and counting them here would step the
+    # pillar twice a day. `kind` is absent from entries written before the
+    # alternation existed; those were all habit videos.
     entries = [e for e in _posted()
-               if e.get("results") and e.get("kind", "habit") == "habit"]
+               if e.get("results") and e.get("kind", "habit") in ("habit", "text")]
     done = {e.get("topic", "") for e in entries}
 
     if isinstance(queue, list):

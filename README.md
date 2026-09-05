@@ -119,11 +119,25 @@ reason one channel can carry four shapes without four of every function.
 | queue | `data/topics.json` | `data/islamic_queue.json` | `data/topics.json` | `data/ibrat_queue.json` |
 
 **Which one runs is the CLOCK's decision, not an alternation.** The workflow
-reads the cron that fired: 01:00 UTC is scripture, 13:00 UTC is the text card.
+reads the cron that fired and passes down a *slot* — `--slot morning` or
+`--slot evening` — and `main._plan_for_slot()` turns that into a kind and a
+pillar:
+
+| slot | | builds |
+|---|---|---|
+| morning | 01:00 UTC = 06:00 PKT | the Qur'an, **every day**, never a hadith |
+| evening | 13:00 UTC = 18:00 PKT | the silent text card, and every third one a hadith in its place |
+
 A channel that posts the same kind of thing at the same time every day is one a
-viewer can form a habit around. `CONTENT_KIND` and `--kind` are for manual runs
-and for pinning; `habit` and `ibrat` are buildable by name but are not on the
-calendar, and putting one there is a cron line in `daily.yml`.
+viewer can form a habit around, and the morning is the half of that promise
+worth keeping exactly: somebody who opens the page at six is there for the
+verse, and "an ayah or a hadith, whichever the count says" is not something to
+form a habit around. The hadith queue keeps draining through the evening
+instead, at `EVENING_HADITH_EVERY` (3), counted on posts like everything else.
+
+`CONTENT_KIND` and `--kind` are for manual runs and for pinning; `habit` and
+`ibrat` are buildable by name but are not on the calendar, and putting one
+there is a cron line in `daily.yml`.
 
 Every queue counts **posted videos, not dates**, so a failed morning does not
 flip anything, and a rehearsal that published nowhere does not burn an entry.
@@ -257,12 +271,23 @@ the translator's.
 `data/topics.json`, keyed by niche. A niche is either a flat list, or an object
 of **pillar → topics** — and the object form rotates.
 
-The default niche `daily` has seven pillars: `neend`, `paisa`, `waqt`, `phone`,
-`ghar`, `aadat`, `rishtay`. Each day's pillar is chosen by how many videos the
-channel has already posted, so day 1 is sleep, day 2 is money, day 8 is sleep
-again. A broad channel that ran five sleep topics in a row would be read as a
-sleep channel by viewers and by the algorithm; the rotation is what keeps it
-broad in practice rather than only in the topic file.
+The default niche `daily` has nine pillars: `neend`, `paisa`, `waqt`, `ghar`,
+`aadat`, `rishtay`, `warzish`, `khurak`, `usool`. (`phone` is gone — the
+channel published that subject to death.) Each day's pillar is chosen by how
+many videos have already been posted *from this queue*, so day 1 is sleep, day
+2 is money, day 10 is sleep again with the next sleep topic. A broad channel
+that ran five sleep topics in a row would be read as a sleep channel by viewers
+and by the algorithm; the rotation is what keeps it broad in practice rather
+than only in the topic file.
+
+"From this queue" is load-bearing and was the subject of a real outage. The
+count read `kind == "habit"` back when habit was the only kind drawing from
+`topics.json`. The evening slot then became the `text` card, which draws from
+the same queue under a different `kind` — so nothing matched, the used-topic
+set stopped growing, the pillar index stopped moving, and the channel posted
+the identical sleep video eight evenings running (2026-08-28 to 09-04). Any
+new kind that takes a topic from here has to be added to that filter in
+`content.next_topic()`.
 
 The pillar also picks the **background** — `stock_bg.THEMES` and
 `replicate_bg.PILLAR_PROMPT` are both keyed by it, so a money topic opens on a

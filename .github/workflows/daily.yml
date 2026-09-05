@@ -4,8 +4,9 @@ on:
   schedule:
     # TWO videos a day, at fixed slots, in Pakistan time (UTC+5):
     #
-    #   01:00 UTC = 06:00 PKT   the ayah or the hadith
-    #   13:00 UTC = 18:00 PKT   the silent text card
+    #   01:00 UTC = 06:00 PKT   the ayah — every day, never a hadith
+    #   13:00 UTC = 18:00 PKT   the silent text card, and every third one a
+    #                           hadith in its place
     #
     # The evening slot was the habit video until 2026-08-22. It was the most
     # expensive thing this repo made — eight scenes, eight TTS calls — and on a
@@ -85,21 +86,28 @@ jobs:
       - name: Ensure the ambient bed exists
         run: python make_ambience.py
 
-      # The morning slot is scripture, the evening slot is the habit video.
-      # Read off the cron that actually fired, so two schedules do not need two
-      # copies of this whole job. A manual run uses whatever `kind` was chosen
-      # in the dialog; choosing nothing falls through to config.CONTENT_KIND,
-      # which alternates.
-      - name: Pick today's kind
-        id: kind
+      # Which SLOT fired, not which kind — read off the cron, so two schedules
+      # do not need two copies of this whole job.
+      #
+      # The slot is passed down rather than a kind because a slot decides two
+      # things and one of them is not knowable from a cron line: the morning is
+      # always the Qur'an, and the evening is the text card except every third
+      # one, which is a hadith. "Every third" is counted on POSTS, in
+      # main._plan_for_slot, where the posted log is — a date-based cron cannot
+      # do it, and would drift every time a build failed.
+      #
+      # A manual run passes no slot at all: it uses whatever `kind` the dialog
+      # chose, and choosing nothing falls through to config.CONTENT_KIND.
+      - name: Pick today's slot
+        id: slot
         run: |
           case "${{ github.event.schedule }}" in
-            "0 1 * * *")  KIND=scripture ;;
-            "0 13 * * *") KIND=text ;;
-            *)            KIND="${{ github.event.inputs.kind }}" ;;
+            "0 1 * * *")  SLOT=morning ;;
+            "0 13 * * *") SLOT=evening ;;
+            *)            SLOT="" ;;
           esac
-          echo "kind=$KIND" >> "$GITHUB_OUTPUT"
-          echo "This run builds: ${KIND:-（alternating）}"
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+          echo "This run is the ${SLOT:-manual} slot"
 
       - name: Build the video
         env:
@@ -164,7 +172,8 @@ jobs:
         run: |
           python -u main.py \
             ${{ github.event.inputs.topic && format('--topic "{0}"', github.event.inputs.topic) || '' }} \
-            ${{ steps.kind.outputs.kind && format('--kind {0}', steps.kind.outputs.kind) || '' }} \
+            ${{ steps.slot.outputs.slot && format('--slot {0}', steps.slot.outputs.slot) || '' }} \
+            ${{ github.event.inputs.kind && format('--kind {0}', github.event.inputs.kind) || '' }} \
             ${{ github.event.inputs.dry_run == 'true' && ' ' || '--post' }}
 
       # Kept whatever happened. When a video reads badly the file and the script

@@ -67,29 +67,36 @@ QURAN_ROLES = ["hook", "ayah", "tarjuma", "tashreeh", "tashreeh",
 # One shape forever is how a feed learns it has already seen an account. The
 # habit side grew three; this side had one — and this is the side that works.
 #
-# Which one is not a free choice: the verse decides. Eighteen of the queue's
-# verses were fetched and measured rather than guessed at — the Arabic runs 28
-# to 114 characters, median 64. The queue file's own _ur previews are capped at
-# 60 and are no use for this; only the fetched text is.
+# Which one is not a free choice: the verse decides, and the rule is Naseem's,
+# stated as plainly as it is implemented — a LONG verse shows the Urdu
+# translation only, a SHORT one shows the Arabic and the Urdu both.
 #
-# 80 puts roughly a third of verses on the long branch. That is the number that
-# was being chosen here, so it is worth saying what it is for: not "it will not
-# fit" — the renderer gives Arabic five lines and most verses need two — but
-# pacing. A long verse plus a hook plus two explanations spends the whole Short
-# before the explanation lands, and a third of videos opening straight on the
-# qari is the variety this channel is short of.
+# The reason is what a phone screen can hold. A long verse set in Arabic fills
+# the frame at a size nobody reads on a scroll, and the viewer this channel is
+# for reads the Urdu anyway; a short verse is four or five words, sits large and
+# clear, and is the frame worth screenshotting. So length picks the shape, not
+# taste, and it picks it the other way round from how it used to.
+#
+# Eighteen of the queue's verses were fetched and measured rather than guessed
+# at — the Arabic runs 28 to 114 characters, median 64. The queue file's own
+# _ur previews are capped at 60 and are no use for this; only the fetched text
+# is. 80 puts roughly a third of verses on the long branch.
 ARABIC_LONG_CHARS = int(os.environ.get("ARABIC_LONG_CHARS") or 80)
 
 SHAPES = {
     # The one that worked. Hook held in silence, then the recitation.
     "full": ["hook", "ayah", "tarjuma", "tashreeh", "tashreeh",
              "amal", "follow"],
-    # For a long verse. No hook at all — the qari opens the video, which is
-    # also the strongest first second this channel has, and only one
-    # explanation follows because the verse has already used the room.
+    # No hook at all — the qari opens the video, which is also the strongest
+    # first second this channel has, and only one explanation follows. Chosen
+    # by nothing automatically any more; kept because SCRIPTURE_SHAPE can pin
+    # it and because it is the right frame for a verse whose recitation is the
+    # point.
     "recitation_first": ["ayah", "tarjuma", "tashreeh", "amal", "follow"],
-    # No Arabic frame. The translation carries it with the reference beneath:
-    # a different video to look at, and the shortest of the three.
+    # No Arabic frame. The translation carries it with the reference beneath.
+    # This is what a LONG verse takes: the Arabic would fill the phone at a
+    # size nobody reads mid-scroll, so the meaning gets the screen and the
+    # recorded Urdu reading gets the sound.
     "tarjuma_only": ["hook", "tarjuma", "tashreeh", "tashreeh",
                      "amal", "follow"],
     # Naseem's ask: a video that opens on the MEANING. No hook — the first
@@ -104,10 +111,17 @@ SHAPES = {
     "tarjuma_first": ["tarjuma", "ayah", "tashreeh", "amal", "follow"],
 }
 
-# What a SHORT verse alternates between. recitation_first is absent on purpose:
-# it is chosen by length and never by rotation, because opening on a four-word
-# ayah puts the strongest frame on screen before anyone has registered it.
-SHORT_ROTATION = ["full", "tarjuma_only", "tarjuma_first"]
+# What a SHORT verse alternates between. Both carry the Arabic AND the Urdu —
+# that is the rule, and the rotation only decides which of the two the video
+# opens on. tarjuma_only is absent because it drops the Arabic, which a short
+# verse has the room for; recitation_first is absent because opening on a
+# four-word ayah puts the strongest frame on screen before anyone has
+# registered it. Both stay in SHAPES and both are still reachable by pinning
+# SCRIPTURE_SHAPE for a run.
+SHORT_ROTATION = ["full", "tarjuma_first"]
+
+# What a LONG verse takes: the translation, its reference, and no Arabic frame.
+LONG_SHAPE = "tarjuma_only"
 
 
 def next_shape(item: dict) -> str:
@@ -124,7 +138,7 @@ def next_shape(item: dict) -> str:
         return forced
 
     if len((item.get("arabic") or "").strip()) > ARABIC_LONG_CHARS:
-        return "recitation_first"
+        return LONG_SHAPE
 
     # Counted the way the habit rotation counts: on posts, not dates, so a
     # morning that failed does not advance it.
@@ -276,13 +290,20 @@ def parse_key(key: str) -> dict:
     return {kind: ref}
 
 
-def next_entry() -> tuple[dict, str]:
+def next_entry(prefer: str = "") -> tuple[dict, str]:
     """The next queue entry and its pillar.
 
     Same contract as content.next_topic(): the queue is written by hand, it
     drains, it rotates across pillars, and running low is a visible condition.
     An entry counts as used only when the video actually reached a platform,
     so a week of setup does not silently burn a week of verses.
+
+    `prefer` names the pillar this slot is FOR, and it beats the rotation. The
+    morning slot is a Qur'an slot — a viewer who opens the page at six every
+    morning is there for the verse, and "an ayah or a hadith, whichever the
+    count says" is not a thing anyone can form a habit around. It is a
+    preference and not a filter: a preferred pillar that has run dry hands the
+    day to the rotation rather than ending the channel.
     """
     if not os.path.exists(ISLAMIC_QUEUE_FILE):
         raise RuntimeError(f"{ISLAMIC_QUEUE_FILE} not found — the queue is "
@@ -300,7 +321,16 @@ def next_entry() -> tuple[dict, str]:
                if e.get("results") and e.get("kind") == "scripture"]
     done = {e.get("topic", "") for e in entries}
     pillars = list(queue)
-    start = len(entries) % len(pillars)
+    if prefer and prefer not in queue:
+        raise ValueError(f"No pillar named {prefer!r} in {ISLAMIC_QUEUE_FILE}. "
+                         f"Have: " + ", ".join(pillars))
+    # The preferred pillar goes first and the rotation follows behind it, so
+    # the fall-through below is the same walk either way.
+    if prefer:
+        pillars = [prefer] + [p for p in pillars if p != prefer]
+        start = 0
+    else:
+        start = len(entries) % len(pillars)
     for step in range(len(pillars)):
         pillar = pillars[(start + step) % len(pillars)]
         remaining = [x for x in queue[pillar] if entry_key(x) not in done]

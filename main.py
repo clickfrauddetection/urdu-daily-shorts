@@ -131,6 +131,41 @@ def _published() -> int:
     return len([e for e in _posted() if e.get("results")])
 
 
+# How often the evening slot gives its place to a hadith. Two text cards, then
+# a hadith, then two more — see _plan_for_slot().
+EVENING_HADITH_EVERY = int(os.environ.get("EVENING_HADITH_EVERY") or 3)
+
+
+def _plan_for_slot(slot: str) -> tuple[str, str]:
+    """What a named slot on the calendar builds today: (kind, pillar).
+
+    The two slots are not symmetrical and that is deliberate.
+
+    MORNING is a Qur'an slot, every single day. It used to alternate an ayah
+    with a hadith, which meant a viewer who came at six for a verse found one
+    every other morning — nothing anyone can form a habit around, and the ayah
+    is what this page is followed for. So the morning names its pillar and the
+    scripture rotation is told to honour it.
+
+    EVENING is the silent text card, and every third one is a hadith instead,
+    so the hadith queue keeps moving without spending the morning. Counted on
+    posts rather than dates, the way every rotation here is: a failed evening
+    does not skip the hadith's turn, and a manual extra run does not double it.
+    The count includes both kinds an evening can be, so it always advances —
+    counting only text cards would stick on the hadith day forever.
+    """
+    if slot == "morning":
+        return "scripture", "quran"
+    evenings = len([e for e in _posted()
+                    if e.get("results")
+                    and (e.get("kind") == "text"
+                         or (e.get("kind") == "scripture"
+                             and e.get("pillar") == "hadith"))])
+    if evenings % EVENING_HADITH_EVERY == EVENING_HADITH_EVERY - 1:
+        return "scripture", "hadith"
+    return "text", ""
+
+
 def _kind_for_today(override: str | None = None) -> str:
     """Which of the two daily slots this run is standing in for.
 
@@ -405,10 +440,14 @@ def main() -> int:
     ap.add_argument("--post", action="store_true",
                     help="publish to Facebook Reels and YouTube Shorts")
     ap.add_argument("--topic", help="script this topic instead of the queue's next")
-    ap.add_argument("--pillar", help="with --topic: which pillar it belongs to, "
-                                     "which picks the background")
+    ap.add_argument("--pillar", help="which pillar this run belongs to: it "
+                                     "picks the background, and on a scripture "
+                                     "run it also picks the queue to draw from")
     ap.add_argument("--kind", choices=sorted(KINDS),
                     help="force today's kind instead of alternating")
+    ap.add_argument("--slot", choices=["morning", "evening"],
+                    help="which slot on the calendar this run is: the slot "
+                         "decides the kind AND the pillar (see _plan_for_slot)")
     args = ap.parse_args()
     _utf8_console()
 
@@ -418,7 +457,12 @@ def main() -> int:
     os.makedirs(TEMP_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    kind = _kind_for_today(args.kind)
+    # The slot decides both the kind and the pillar; anything named explicitly
+    # on the command line still wins over it, so a manual re-run of one
+    # morning's verse is unchanged.
+    slot_kind, slot_pillar = (_plan_for_slot(args.slot) if args.slot
+                              else ("", ""))
+    kind = _kind_for_today(args.kind or slot_kind or None)
     plan_of = KINDS[kind]
     step(f"Today is a {kind} day  (post #{_published() + 1} on {CHANNEL_NAME})")
 
@@ -429,7 +473,7 @@ def main() -> int:
             entry = writer.parse_key(args.topic)
             pillar = args.pillar or ("quran" if entry.get("quran") else "hadith")
         else:
-            entry, pillar = writer.next_entry()
+            entry, pillar = writer.next_entry(prefer=args.pillar or slot_pillar)
         topic = writer.entry_key(entry)
         step(f"Today: {topic}   [{pillar}]")
         spec = writer.build_spec(entry, pillar)
