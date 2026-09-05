@@ -505,5 +505,20 @@
         "post_id": "122110778451445401"
       }
     }
+  },
+  {
+    "at": "2026-09-05T15:55:41+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "paisa",
+    "topic": "chhoti chhoti kharidari jo mahine ka budget kha jaati hai",
+    "title": "وہ خرچ جو نظر نہیں آتا",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122111012157445401"
+      }
+    }
   }
 ]
