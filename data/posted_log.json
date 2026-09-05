@@ -470,5 +470,25 @@
         "post_id": "122110486383445401"
       }
     }
+  },
+  {
+    "at": "2026-09-05T01:44:28+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "quran",
+    "topic": "quran 3:139",
+    "title": "کمزور نہ پڑو، غالب تم ہی ہو گے – آل عمران ۱۳۹",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122110730991445401"
+      },
+      "facebook:seoblogy": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "1486748143473213"
+      }
+    }
   }
 ]
