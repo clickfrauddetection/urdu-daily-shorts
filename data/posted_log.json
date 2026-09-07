@@ -550,5 +550,25 @@
         "post_id": "122111419983445401"
       }
     }
+  },
+  {
+    "at": "2026-09-07T05:37:08+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "quran",
+    "topic": "quran 42:43",
+    "title": "صبر اور معافی — ہمت کا کام | سورۃ الشوریٰ ۴۲:۴۳",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122111582559445401"
+      },
+      "facebook:seoblogy": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "1488621209952573"
+      }
+    }
   }
 ]
