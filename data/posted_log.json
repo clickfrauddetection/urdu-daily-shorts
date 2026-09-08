@@ -585,5 +585,20 @@
         "post_id": "122111833311445401"
       }
     }
+  },
+  {
+    "at": "2026-09-08T05:37:51+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "quran",
+    "topic": "quran 47:7",
+    "title": "اللہ کا ساتھ دو، وہ تمہارا ساتھ دے گا — سورۃ محمد ۷",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122111973027445401"
+      }
+    }
   }
 ]
