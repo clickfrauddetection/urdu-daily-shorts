@@ -600,5 +600,20 @@
         "post_id": "122111973027445401"
       }
     }
+  },
+  {
+    "at": "2026-09-08T17:15:53+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "ghar",
+    "topic": "cheezon ki apni jagah",
+    "title": "چیزوں کی اپنی جگہ",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122112142857445401"
+      }
+    }
   }
 ]
