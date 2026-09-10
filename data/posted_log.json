@@ -645,5 +645,20 @@
         "post_id": "122112493797445401"
       }
     }
+  },
+  {
+    "at": "2026-09-10T17:00:12+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "aadat",
+    "topic": "chhoti shuruaat kyun kaam karti hai",
+    "title": "چھوٹی شروعات کیوں کام کرتی ہے",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122112780207445401"
+      }
+    }
   }
 ]
