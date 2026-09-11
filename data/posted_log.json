@@ -680,5 +680,20 @@
         "post_id": "1492134812934546"
       }
     }
+  },
+  {
+    "at": "2026-09-11T17:01:33+00:00",
+    "niche": "daily",
+    "kind": "text",
+    "pillar": "rishtay",
+    "topic": "ghar aa kar pehle das minute",
+    "title": "گھر آنے کے پہلے دس منٹ",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122113024689445401"
+      }
+    }
   }
 ]
