@@ -660,5 +660,25 @@
         "post_id": "122112780207445401"
       }
     }
+  },
+  {
+    "at": "2026-09-11T05:37:36+00:00",
+    "niche": "daily",
+    "kind": "scripture",
+    "pillar": "quran",
+    "topic": "quran 55:60",
+    "title": "نیکی کا بدلہ نیکی — سورۃ الرحمٰن",
+    "results": {
+      "facebook": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "122112903537445401"
+      },
+      "facebook:seoblogy": {
+        "success": true,
+        "message": "Video is Processing. To check the status of the video, please follow the instructions listed at https://developers.facebook.com/docs/video-api/guides/reels-publishing#get-the-upload-status.",
+        "post_id": "1492134812934546"
+      }
+    }
   }
 ]
